@@ -32,4 +32,85 @@
   html {
     scroll-behavior: smooth;
   }
+
+  .admin-shell .text-slate-950,
+  .admin-shell .text-slate-900 {
+    color: #f8fbff !important;
+  }
+
+  .admin-shell .text-slate-700,
+  .admin-shell .text-slate-600,
+  .admin-shell .text-slate-500 {
+    color: #c2d0e8 !important;
+  }
+
+  .admin-shell .text-slate-400 {
+    color: #8ea3c8 !important;
+  }
+
+  .admin-shell [class*='bg-slate-50'],
+  .admin-shell [class*='bg-white'] {
+    background: #0d1422 !important;
+  }
+
+  .admin-shell [class*='border-slate-200'],
+  .admin-shell [class*='border-white/70'],
+  .admin-shell [class*='border-white/80'] {
+    border-color: #1f2c45 !important;
+  }
+
+  .admin-shell [class*='bg-blue-50'] {
+    background: #16233a !important;
+  }
+
+  .admin-shell [class*='border-blue-200'] {
+    border-color: #38558a !important;
+  }
+
+  .admin-shell [class*='text-blue-700'],
+  .admin-shell [class*='text-blue-600'] {
+    color: #dce7ff !important;
+  }
+
+  .admin-shell [class*='bg-rose-50'] {
+    background: rgba(127, 29, 29, 0.28) !important;
+  }
+
+  .admin-shell [class*='border-rose-200'] {
+    border-color: rgba(244, 63, 94, 0.28) !important;
+  }
+
+  .admin-shell [class*='text-rose-700'] {
+    color: #fecdd3 !important;
+  }
+
+  .admin-shell [class*='bg-emerald-50'] {
+    background: rgba(6, 78, 59, 0.28) !important;
+  }
+
+  .admin-shell [class*='border-emerald-200'] {
+    border-color: rgba(16, 185, 129, 0.28) !important;
+  }
+
+  .admin-shell [class*='text-emerald-700'] {
+    color: #bbf7d0 !important;
+  }
+
+  .admin-shell [class*='bg-amber-50'] {
+    background: rgba(120, 53, 15, 0.28) !important;
+  }
+
+  .admin-shell [class*='border-amber-200'] {
+    border-color: rgba(245, 158, 11, 0.28) !important;
+  }
+
+  .admin-shell [class*='text-amber-700'] {
+    color: #fde68a !important;
+  }
+
+  .admin-shell [class*='shadow-[0_22px_40px'],
+  .admin-shell [class*='shadow-[0_24px_60px'],
+  .admin-shell [class*='shadow-[0_18px_45px'] {
+    box-shadow: 0 20px 48px rgba(2, 6, 23, 0.28) !important;
+  }
 }

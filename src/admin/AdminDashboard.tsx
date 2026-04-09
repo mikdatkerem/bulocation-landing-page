@@ -4,19 +4,21 @@ import QRCode from 'qrcode';
 import {
   Activity,
   ArrowRight,
+  Bell,
   Building2,
   Check,
   ChevronRight,
   Compass,
   Eye,
   EyeOff,
+  HelpCircle,
   LogOut,
   Map,
   ParkingCircle,
   Plus,
   RotateCcw,
+  Search,
   ShieldCheck,
-  Sparkles,
   Trash2,
   Upload,
   Users,
@@ -380,7 +382,7 @@ function SearchableSelect({
 }
 
 function inputClassName() {
-  return 'w-full rounded-none border border-[#23314d] bg-[#0f1727] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[#4f6ea8] focus:bg-[#111c30]';
+  return 'w-full rounded-[6px] border border-[#23314d] bg-[#0f1727] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[#4f6ea8] focus:bg-[#111c30]';
 }
 
 function selectClassName() {
@@ -388,11 +390,39 @@ function selectClassName() {
 }
 
 function sectionCardClassName() {
-  return 'rounded-none border border-[#1f2c45] bg-[#101927] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)] lg:p-8';
+  return 'rounded-[8px] border border-[#1f2c45] bg-[#101927] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)] lg:p-8';
 }
 
 function CodeGuide({ children }: { children: ReactNode }) {
   return <p className="text-xs leading-5 text-slate-400">{children}</p>;
+}
+
+function rowCardClassName(active = false) {
+  return `w-full rounded-[8px] border px-4 py-4 text-left transition ${
+    active
+      ? 'border-[#4f6ea8] bg-[#16233a] text-white shadow-[0_20px_40px_rgba(2,6,23,0.28)]'
+      : 'border-[#1f2c45] bg-[#0d1422] text-slate-200 hover:border-[#31486f] hover:bg-[#111b2d]'
+  }`;
+}
+
+function subtlePanelClassName() {
+  return 'rounded-[8px] border border-[#1f2c45] bg-[#0d1422]';
+}
+
+function actionButtonClassName(tone: 'neutral' | 'danger' | 'accent' = 'neutral') {
+  if (tone === 'danger') {
+    return 'inline-flex items-center gap-2 rounded-[6px] border border-rose-500/30 bg-rose-950/30 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-400/50 hover:bg-rose-900/40';
+  }
+
+  if (tone === 'accent') {
+    return 'inline-flex items-center gap-2 rounded-[6px] border border-[#38558a] bg-[#16233a] px-3 py-1.5 text-xs font-medium text-[#dce7ff] transition hover:border-[#4f6ea8] hover:bg-[#1a2a43]';
+  }
+
+  return 'inline-flex items-center gap-2 rounded-[6px] border border-[#2b3d5f] bg-[#101927] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-[#3a527e] hover:bg-[#132035]';
+}
+
+function topNavTabs(activeViewLabel: string) {
+  return ['Dashboard', 'Analytics', activeViewLabel];
 }
 
 function parsePolygonJson(value: string | null | undefined) {
@@ -2123,7 +2153,7 @@ export default function AdminDashboard() {
 
           <div className="mt-6 space-y-3">
             {organizations.length === 0 ? (
-              <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+              <div className="border border-dashed border-[#2b3d5f] bg-[#0d1422] p-5 text-sm text-slate-400">
                 Henuz organizasyon yok.
               </div>
             ) : (
@@ -2132,19 +2162,19 @@ export default function AdminDashboard() {
                 return (
                   <button
                     key={organization.id}
-                    className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${active ? 'border-slate-900 bg-slate-900 text-white shadow-[0_22px_40px_rgba(15,23,42,0.18)]' : 'border-slate-200 bg-slate-50/70 text-slate-700 hover:bg-white'}`}
+                    className={rowCardClassName(active)}
                     onClick={() => setSelectedOrganizationId(organization.id)}
                     type="button"
                   >
                     <p className="text-sm font-semibold">{organization.name}</p>
-                    <p className={`mt-2 text-xs leading-6 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                    <p className={`mt-2 text-xs leading-6 ${active ? 'text-slate-300' : 'text-slate-400'}`}>
                       {organization.description || 'Aciklama yok'}
                     </p>
                     <div className="mt-3 flex gap-2">
-                      <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-700" onClick={(event) => { event.stopPropagation(); void handleUpdateOrganization(organization); }}>
+                      <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleUpdateOrganization(organization); }}>
                         Duzenle
                       </span>
-                      <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-medium text-rose-700" onClick={(event) => { event.stopPropagation(); void handleDeleteOrganization(organization.id); }}>
+                      <span className={actionButtonClassName('danger')} onClick={(event) => { event.stopPropagation(); void handleDeleteOrganization(organization.id); }}>
                         Sil
                       </span>
                     </div>
@@ -2158,7 +2188,7 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           <div className={sectionCardClassName()}>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organizasyon olustur</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Yeni kurum ekle</h3>
+            <h3 className="mt-2 text-2xl font-semibold text-white">Yeni kurum ekle</h3>
             <div className="mt-6 grid gap-4">
               <FieldShell label="Ad">
                 <input className={inputClassName()} placeholder="Ornek: Acibadem Saglik Grubu" value={organizationForm.name} onChange={(event) => setOrganizationForm((current) => ({ ...current, name: event.target.value }))} />
@@ -2167,7 +2197,7 @@ export default function AdminDashboard() {
                 <textarea className={`${inputClassName()} min-h-28 resize-y`} placeholder="Bu organizasyonun kapsami ve yonetim notu" value={organizationForm.description} onChange={(event) => setOrganizationForm((current) => ({ ...current, description: event.target.value }))} />
               </FieldShell>
               <CodeGuide>Organizasyon seviyesinde kod yok. Kod yapisi yerleske, bina, kat ve otopark seviyesinde kullanilir.</CodeGuide>
-              <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" disabled={busy || !organizationForm.name.trim()} onClick={handleCreateOrganization} type="button">
+              <button className="inline-flex items-center justify-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" disabled={busy || !organizationForm.name.trim()} onClick={handleCreateOrganization} type="button">
                 <Plus className="h-4 w-4" />
                 Organizasyon olustur
               </button>
@@ -2176,19 +2206,19 @@ export default function AdminDashboard() {
 
           <div className={sectionCardClassName()}>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Secili organizasyon</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">{organizationHierarchy?.name || 'Bir organizasyon secin'}</h3>
+            <h3 className="mt-2 text-2xl font-semibold text-white">{organizationHierarchy?.name || 'Bir organizasyon secin'}</h3>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+              <div className={`${subtlePanelClassName()} p-4`}>
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Yerleske</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">{sites.length}</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{sites.length}</p>
               </div>
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+              <div className={`${subtlePanelClassName()} p-4`}>
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Bina</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">{buildings.length}</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{buildings.length}</p>
               </div>
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+              <div className={`${subtlePanelClassName()} p-4`}>
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Kamera</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">{cameras.length}</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{cameras.length}</p>
               </div>
             </div>
           </div>
@@ -2204,24 +2234,24 @@ export default function AdminDashboard() {
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className={sectionCardClassName()}>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Durum ozeti</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-950">Secili operasyon resmi</h3>
+          <h3 className="mt-2 text-2xl font-semibold text-white">Secili operasyon resmi</h3>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+            <div className={`${subtlePanelClassName()} p-4`}>
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Secili organizasyon</p>
-              <p className="mt-2 text-lg font-semibold text-slate-950">{organizationHierarchy?.name || 'Secim yok'}</p>
-              <p className="mt-2 text-sm text-slate-500">{organizationHierarchy?.description || 'Detay icin organizasyonlar sekmesini kullanin.'}</p>
+              <p className="mt-2 text-lg font-semibold text-white">{organizationHierarchy?.name || 'Secim yok'}</p>
+              <p className="mt-2 text-sm text-slate-400">{organizationHierarchy?.description || 'Detay icin organizasyonlar sekmesini kullanin.'}</p>
             </div>
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+            <div className={`${subtlePanelClassName()} p-4`}>
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Yonetici hesabi</p>
-              <p className="mt-2 text-lg font-semibold text-slate-950">{profile?.fullName || 'Bilinmiyor'}</p>
-              <p className="mt-2 text-sm text-slate-500">{profile?.email || 'Oturum yok'}</p>
+              <p className="mt-2 text-lg font-semibold text-white">{profile?.fullName || 'Bilinmiyor'}</p>
+              <p className="mt-2 text-sm text-slate-400">{profile?.email || 'Oturum yok'}</p>
             </div>
           </div>
         </div>
 
         <div className={sectionCardClassName()}>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Hizli gecis</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-950">Siradaki islem</h3>
+          <h3 className="mt-2 text-2xl font-semibold text-white">Siradaki islem</h3>
           <div className="mt-6 space-y-3">
             {[
               ['organizations', 'Organizasyonlar', 'Kurumsal sahiplik ve secim'],
@@ -2229,12 +2259,12 @@ export default function AdminDashboard() {
               ['maps', 'Haritalar', 'Kroki surumleri ve editor'],
               ['cameras', 'Kameralar', 'Canli izleme cihazi ve bolge baglari'],
             ].map(([key, title, text]) => (
-              <button key={key} className="flex w-full items-center justify-between rounded-[22px] border border-slate-200 bg-slate-50/70 px-4 py-4 text-left" onClick={() => setActiveView(key as SidebarKey)} type="button">
+              <button key={key} className={`flex w-full items-center justify-between px-4 py-4 text-left ${subtlePanelClassName()}`} onClick={() => setActiveView(key as SidebarKey)} type="button">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{text}</p>
+                  <p className="text-sm font-semibold text-white">{title}</p>
+                  <p className="mt-1 text-xs text-slate-400">{text}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-slate-500" />
+                <ChevronRight className="h-4 w-4 text-slate-400" />
               </button>
             ))}
           </div>
@@ -2249,9 +2279,9 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organizasyonlar</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-950">Tesis konteynerleri</h3>
+                <h3 className="mt-2 text-2xl font-semibold text-white">Tesis konteynerleri</h3>
               </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
+              <div className="border border-[#2b3d5f] bg-[#0d1422] px-3 py-1 text-xs font-medium text-slate-300">
                 {organizations.length} kayit
               </div>
             </div>
@@ -2259,7 +2289,7 @@ export default function AdminDashboard() {
             <div className="mt-6 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
               <div className="space-y-3">
                 {organizations.length === 0 ? (
-                  <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+                  <div className="border border-dashed border-[#2b3d5f] bg-[#0d1422] p-5 text-sm text-slate-400">
                     Henuz organizasyon yok. Tesis kurulumuna baslamak icin ilk organizasyonu olusturun.
                   </div>
                 ) : (
@@ -2268,21 +2298,17 @@ export default function AdminDashboard() {
                     return (
                       <button
                         key={organization.id}
-                        className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${
-                          active
-                            ? 'border-slate-900 bg-slate-900 text-white shadow-[0_22px_40px_rgba(15,23,42,0.18)]'
-                            : 'border-slate-200 bg-slate-50/70 text-slate-700 hover:bg-white'
-                        }`}
+                        className={rowCardClassName(active)}
                         onClick={() => setSelectedOrganizationId(organization.id)}
                         type="button"
                       >
                         <p className="text-sm font-semibold">{organization.name}</p>
-                        <p className={`mt-2 text-xs leading-6 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                        <p className={`mt-2 text-xs leading-6 ${active ? 'text-slate-300' : 'text-slate-400'}`}>
                           {organization.description || 'Aciklama yok'}
                         </p>
                         <div className="mt-3 flex gap-2">
                           <span
-                            className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-700"
+                            className={actionButtonClassName('neutral')}
                             onClick={(event) => {
                               event.stopPropagation();
                               void handleUpdateOrganization(organization);
@@ -2291,7 +2317,7 @@ export default function AdminDashboard() {
                             Duzenle
                           </span>
                           <span
-                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-medium text-rose-700"
+                            className={actionButtonClassName('danger')}
                             onClick={(event) => {
                               event.stopPropagation();
                               void handleDeleteOrganization(organization.id);
@@ -2306,8 +2332,8 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5">
-                <p className="text-sm font-semibold text-slate-900">Organizasyon olustur</p>
+              <div className={`${subtlePanelClassName()} p-5`}>
+                <p className="text-sm font-semibold text-white">Organizasyon olustur</p>
                 <div className="mt-4 space-y-3">
                   <input
                     className={inputClassName()}
@@ -2318,7 +2344,7 @@ export default function AdminDashboard() {
                     }
                   />
                   <textarea
-                    className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400"
+                    className={`${inputClassName()} min-h-28 resize-y`}
                     placeholder="Aciklama"
                     value={organizationForm.description}
                     onChange={(event) =>
@@ -2326,7 +2352,7 @@ export default function AdminDashboard() {
                     }
                   />
                   <button
-                    className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_20px_36px_rgba(37,99,235,0.18)] disabled:opacity-60"
+                    className="inline-flex items-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                     disabled={busy || !organizationForm.name.trim()}
                     onClick={handleCreateOrganization}
                     type="button"
@@ -3291,8 +3317,8 @@ export default function AdminDashboard() {
                 />
               </FieldShell>
               {uploadedAsset ? (
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
-                  <p className="font-semibold text-slate-900">{uploadedAsset.originalFileName}</p>
+                <div className={`${subtlePanelClassName()} p-4 text-sm text-slate-300`}>
+                  <p className="font-semibold text-white">{uploadedAsset.originalFileName}</p>
                   <p className="mt-1">{uploadedAsset.relativePath}</p>
                 </div>
               ) : null}
@@ -3301,7 +3327,7 @@ export default function AdminDashboard() {
 
           <div className={sectionCardClassName()}>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Surum olustur</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Yayina hazir harita taslaklari</h3>
+            <h3 className="mt-2 text-2xl font-semibold text-white">Yayina hazir harita taslaklari</h3>
             <div className="mt-6 grid gap-4">
               <SearchableSelect
                 label="Organizasyon"
@@ -3386,7 +3412,7 @@ export default function AdminDashboard() {
                 </FieldShell>
               </div>
                 <button
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                   disabled={busy || !uploadedAsset || !mapVersionForm.floorId || !mapVersionForm.name.trim()}
                   onClick={handleCreateMapVersion}
                   type="button"
@@ -3399,10 +3425,10 @@ export default function AdminDashboard() {
 
           <div className={sectionCardClassName()}>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Harita surumleri</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Taslak veya yayindaki editoru sec</h3>
+            <h3 className="mt-2 text-2xl font-semibold text-white">Taslak veya yayindaki editoru sec</h3>
             <div className="mt-6 space-y-3">
               {filteredMapVersions.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+                <div className="border border-dashed border-[#2b3d5f] bg-[#0d1422] p-5 text-sm text-slate-400">
                   Secili filtreler icin henuz harita surumu yok.
                 </div>
               ) : (
@@ -3411,11 +3437,7 @@ export default function AdminDashboard() {
                   return (
                     <button
                       key={version.id}
-                      className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${
-                        active
-                          ? 'border-slate-900 bg-slate-900 text-white shadow-[0_22px_40px_rgba(15,23,42,0.18)]'
-                          : 'border-slate-200 bg-slate-50/70 text-slate-700 hover:bg-white'
-                      }`}
+                      className={rowCardClassName(active)}
                       onClick={() => {
                         setSelectedMapSiteId(version.siteId);
                         setSelectedMapBuildingId(version.buildingId);
@@ -3428,25 +3450,25 @@ export default function AdminDashboard() {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold">{version.name}</p>
-                          <p className={`mt-1 text-xs ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                          <p className={`mt-1 text-xs ${active ? 'text-slate-300' : 'text-slate-400'}`}>
                             {version.floorCode} - {version.floorName}
                           </p>
                         </div>
-                        <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+                        <span className="border border-[#2b3d5f] bg-[#0d1422] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                           {statusLabel(version.status)}
                         </span>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-medium" onClick={(event) => { event.stopPropagation(); void handleRenameMapVersion(version.id, version.name); }}>
+                        <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleRenameMapVersion(version.id, version.name); }}>
                           Yeniden adlandir
                         </span>
-                        <span className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-medium" onClick={(event) => { event.stopPropagation(); void handleDuplicateMapVersion(version.id, version.name); }}>
+                        <span className={actionButtonClassName('accent')} onClick={(event) => { event.stopPropagation(); void handleDuplicateMapVersion(version.id, version.name); }}>
                           Kopyala
                         </span>
-                        <span className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-medium" onClick={(event) => { event.stopPropagation(); void handleArchiveMapVersion(version.id); }}>
+                        <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleArchiveMapVersion(version.id); }}>
                           Arsivle
                         </span>
-                        <span className="rounded-full border border-rose-200 px-3 py-1 text-[11px] font-medium text-rose-300" onClick={(event) => { event.stopPropagation(); void handleDeleteMapVersion(version.id); }}>
+                        <span className={actionButtonClassName('danger')} onClick={(event) => { event.stopPropagation(); void handleDeleteMapVersion(version.id); }}>
                           Sil
                         </span>
                       </div>
@@ -4232,20 +4254,32 @@ export default function AdminDashboard() {
     return <AdminLogin onSubmit={handleLogin} error={error} busy={busy} />;
   }
 
+  const topSearchPlaceholder =
+    activeView === 'cameras'
+      ? 'Kamera veya bolge ara...'
+      : activeView === 'maps'
+        ? 'POI veya koordinat ara...'
+        : activeView === 'users'
+          ? 'Kullanici ara...'
+          : 'Search...';
+
   return (
-    <div className="min-h-screen bg-[#0b121d] text-slate-100">
+    <div className="admin-shell min-h-screen bg-[#0b121d] text-slate-100">
       <div className="flex min-h-screen">
         <aside className="hidden w-[284px] shrink-0 border-r border-[#1f2c45] bg-[#0c1524] px-6 py-8 xl:block">
           <div className="mb-10 space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-none border border-[#2d3d5a] bg-[#101a2c] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#9bb4e8]">
-              <Sparkles className="h-3.5 w-3.5" />
-              Bulocation Yonetim
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-white">Tesis Kontrolu</h1>
-              <p className="mt-2 max-w-[18rem] text-sm leading-6 text-slate-400">
-                Tesis hiyerarsisi, harita yayini ve yonetici erisimini tek panelden yonetin.
-              </p>
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center border border-[#2b3d5f] bg-[#15233a] text-[#9bb4e8]">
+                <Map className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-[2rem] font-semibold tracking-[-0.03em] text-[#eef3ff]">
+                  Bulocation
+                </h1>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#8ea3c8]">
+                  Enterprise Admin
+                </p>
+              </div>
             </div>
           </div>
 
@@ -4271,32 +4305,66 @@ export default function AdminDashboard() {
             })}
           </nav>
 
-          <div className="mt-10 border border-[#1f2c45] bg-[#101927] p-5">
-            <p className="text-sm font-semibold text-white">{profile?.fullName}</p>
-            <p className="mt-1 text-xs text-slate-400">{profile?.email}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {profile?.roles.map((role) => (
-                <span
-                  key={role}
-                  className="border border-[#2d3d5a] bg-[#0d1422] px-2.5 py-1 text-xs font-medium text-[#9bb4e8]"
-                >
-                  {role}
-                </span>
-              ))}
+          <div className="mt-auto border border-[#1f2c45] bg-[#101927] p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center overflow-hidden border border-[#2b3d5f] bg-[#15233a] text-sm font-semibold text-[#eef3ff]">
+                {(profile?.fullName ?? 'A').slice(0, 1)}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[#eef3ff]">{profile?.fullName}</p>
+                <p className="truncate text-xs text-[#8ea3c8]">{profile?.email}</p>
+              </div>
             </div>
             <button
-              className="mt-6 flex w-full items-center justify-center gap-2 border border-[#263654] bg-[#15233a] px-4 py-3 text-sm font-semibold text-white"
+              className="mt-4 flex w-full items-center justify-center gap-2 border border-[#263654] bg-[#15233a] px-4 py-3 text-sm font-semibold text-[#eef3ff]"
               onClick={handleLogout}
               type="button"
             >
               <LogOut className="h-4 w-4" />
-              Cikis yap
+              Oturumu kapat
             </button>
           </div>
         </aside>
 
         <main className="flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
           <div className="mx-auto max-w-[1480px] space-y-6">
+            <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1f2c45] pb-5">
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="relative min-w-[320px] max-w-[360px] flex-1">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9bb4e8]" />
+                  <input
+                    className="h-12 w-full border border-[#1f2c45] bg-black px-12 text-sm text-[#eef3ff] outline-none placeholder:text-[#66789a]"
+                    placeholder={topSearchPlaceholder}
+                  />
+                </div>
+                <nav className="flex items-center gap-8">
+                  {topNavTabs(activeViewLabel).map((tab, index) => {
+                    const active = index === 2;
+                    return (
+                      <span
+                        key={tab}
+                        className={`border-b-2 pb-1 text-sm font-semibold ${
+                          active
+                            ? 'border-[#9bb4e8] text-[#eef3ff]'
+                            : 'border-transparent text-[#a8b8d8]'
+                        }`}
+                      >
+                        {tab}
+                      </span>
+                    );
+                  })}
+                </nav>
+              </div>
+              <div className="flex items-center gap-3">
+                <button className="flex h-11 w-11 items-center justify-center border border-[#1f2c45] bg-[#101927] text-[#cdd8ef]" type="button">
+                  <Bell className="h-4 w-4" />
+                </button>
+                <button className="flex h-11 w-11 items-center justify-center border border-[#1f2c45] bg-[#101927] text-[#cdd8ef]" type="button">
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </div>
+            </header>
+
             {error ? (
               <div className="border border-rose-500/30 bg-rose-950/30 px-5 py-4 text-sm text-rose-200">
                 {error}
@@ -4314,23 +4382,38 @@ export default function AdminDashboard() {
               transition={{ duration: 0.4 }}
               className="border border-[#1f2c45] bg-[#101927] p-5 shadow-[0_24px_60px_rgba(2,6,23,0.3)] lg:p-6"
             >
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="inline-flex items-center gap-2 border border-[#2d3d5a] bg-[#0d1422] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#9bb4e8]">
-                    <Sparkles className="h-3 w-3" />
-                    Yonetim Yuzeyi
+                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8ea3c8]">
+                    {activeViewLabel}
                   </div>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                    Operasyon paneli
+                  <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[#eef3ff] sm:text-4xl">
+                    {activeViewLabel} Yonetimi
                   </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                    Tesis hiyerarsisi, haritalar, otoparklar ve kullanici islemleri tek akista yonetilir.
+                  <p className="mt-3 max-w-3xl text-sm leading-7 text-[#b4c4e2]">
+                    Kurumsal yapinizi, navigasyon varliklarinizi ve operasyonel birimlerinizi bu panel uzerinden merkezi olarak yonetebilirsiniz.
                   </p>
                 </div>
-                <div className="border border-[#263654] bg-[#15233a] px-4 py-3 text-white shadow-[0_20px_40px_rgba(2,6,23,0.2)]">
-                  <p className="text-xs uppercase tracking-[0.22em] text-[#9bb4e8]">Aktif gorunum</p>
-                  <p className="mt-1.5 text-lg font-semibold">{activeViewLabel}</p>
-                </div>
+                {activeView === 'organizations' ? (
+                  <button
+                    className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f]"
+                    onClick={handleCreateOrganization}
+                    type="button"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Yeni Organizasyon Ekle
+                  </button>
+                ) : null}
+                {activeView === 'maps' && selectedMapVersionId ? (
+                  <button
+                    className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f]"
+                    onClick={handlePublishMapVersion}
+                    type="button"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Yayinla
+                  </button>
+                ) : null}
               </div>
 
               <div className="mt-6 grid gap-3 md:grid-cols-5">
