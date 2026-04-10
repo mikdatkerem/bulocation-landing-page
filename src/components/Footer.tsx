@@ -5,27 +5,28 @@ export default function Footer() {
   const { t } = useLanguage();
 
   return (
-    <footer className="bg-[#0d1013] text-[#c5c0ba]">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8 text-[11px] uppercase tracking-[0.18em] md:flex-row md:items-center md:justify-between lg:px-8">
-        <div className="flex flex-col items-center gap-2 md:items-start">
-          <span className="font-display text-sm tracking-[0.12em] text-[#F5F3EF]">
-            BuLocation
-          </span>
-          <span className="text-sm">
-            &copy; {new Date().getFullYear()} {t('footer.rights')}
-          </span>
+    <footer className="bg-[#060708] px-6 py-14 text-[#6f7480] lg:px-10">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 text-[10px] font-bold uppercase tracking-[0.18em] md:flex-row">
+        <div className="text-center md:text-left">
+          <div className="font-display text-sm tracking-[0.16em] text-[#f5f3ef]">BULOCATION</div>
+          <div className="mt-2">&copy; {new Date().getFullYear()} {t('footer.desc')}</div>
         </div>
 
-        <div className="flex flex-col items-center gap-3 md:flex-row md:gap-6">
-          <span>{t('footer.developed')}</span>
+        <div className="flex flex-wrap items-center justify-center gap-8">
+          <a className="transition-colors hover:text-[#1836B9]" href="/hizmetlerimiz">
+            {t('footer.services')}
+          </a>
+          <a className="transition-colors hover:text-[#1836B9]" href="/#about">
+            {t('footer.about')}
+          </a>
           <a
+            className="flex items-center gap-2 text-[#c5c5d6] transition-colors hover:text-[#1836B9]"
             href="https://www.linkedin.com/in/mikdatkeremkalkan"
-            target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-[#F5F3EF] transition-colors duration-200 hover:text-[#4B18B9]"
+            target="_blank"
           >
-            Mikdat Kerem Kalkan
-            <Linkedin className="w-4 h-4" />
+            LinkedIn
+            <Linkedin className="h-4 w-4" />
           </a>
         </div>
       </div>

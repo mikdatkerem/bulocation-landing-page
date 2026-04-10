@@ -1,32 +1,25 @@
-import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 
 export default function TechStack() {
   const { t } = useLanguage();
 
   return (
-    <section className="bg-[#060708] py-20" id="contact">
-      <div className="mx-auto max-w-6xl px-6 text-center lg:px-8">
-        <motion.h2
-          animate={{ opacity: 1, y: 0 }}
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5 }}
-          className="font-display text-4xl font-bold uppercase tracking-[-0.04em] text-[#F5F3EF] sm:text-6xl"
-        >
-          {t('cta.title')}
-        </motion.h2>
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+    <section className="bg-[#060708] px-6 py-40 text-center lg:px-10" id="contact">
+      <div className="mx-auto max-w-5xl">
+        <h2 className="font-display text-6xl font-extrabold uppercase leading-[0.88] tracking-[-0.07em] text-[#f5f3ef] md:text-8xl">
+          {t('cta.title.line1')}
+          <br />
+          <span className="landing-text-glow text-[#1836B9]">{t('cta.title.line2')}</span>
+        </h2>
+        <p className="mx-auto mt-9 max-w-2xl text-xl font-light leading-8 text-[#c5c5d6]">{t('cta.desc')}</p>
+        <div className="mt-12 flex justify-center">
           <a
-            className="border-2 border-[#1836B9] bg-[#1836B9] px-6 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#F5F3EF] transition-transform hover:-translate-y-0.5"
+            className="group inline-flex items-center gap-4 rounded-lg bg-[#1836B9] px-12 py-6 font-display text-sm font-extrabold uppercase tracking-[0.22em] text-[#f5f3ef] transition-transform hover:-translate-y-1"
             href="mailto:hello@bulocation.com"
           >
             {t('cta.primary')}
-          </a>
-          <a
-            className="border-2 border-[#4B18B9] px-6 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#F5F3EF] transition-colors hover:bg-[#0d1013]"
-            href="#features"
-          >
-            {t('cta.secondary')}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </a>
         </div>
       </div>

@@ -1,158 +1,146 @@
-import { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Accessibility, ArrowRightLeft, Building2, CarFront, Hospital, Map, ParkingSquare, ShieldCheck, University } from 'lucide-react';
+import { Building2, Camera, Map, ParkingSquare, QrCode, Route } from 'lucide-react';
+import otoparkImage from '../assets/otoparkimg.jpg';
 import { useLanguage } from '../hooks/useLanguage';
 
-const featureIcons = [Building2, Accessibility, Map, ArrowRightLeft, ShieldCheck, CarFront];
+const sectorItems = [
+  {
+    titleKey: 'sector.parking.title',
+    tagKey: 'sector.parking.tag',
+    descKey: 'sector.parking.desc',
+    image: otoparkImage,
+  },
+  {
+    titleKey: 'sector.hospital.title',
+    tagKey: 'sector.hospital.tag',
+    descKey: 'sector.hospital.desc',
+    image:
+      'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    titleKey: 'sector.mall.title',
+    tagKey: 'sector.mall.tag',
+    descKey: 'sector.mall.desc',
+    image:
+      'https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=1400&q=80',
+  },
+];
+
+const featureItems = [
+  {
+    icon: Map,
+    titleKey: 'features.map.title',
+    descKey: 'features.map.desc',
+    metaKeys: ['features.map.meta1', 'features.map.meta2'],
+  },
+  {
+    icon: QrCode,
+    titleKey: 'features.qr.title',
+    descKey: 'features.qr.desc',
+    metaKeys: ['features.qr.meta1', 'features.qr.meta2'],
+  },
+  {
+    icon: Route,
+    titleKey: 'features.route.title',
+    descKey: 'features.route.desc',
+    metaKeys: ['features.route.meta1', 'features.route.meta2'],
+  },
+  {
+    icon: Camera,
+    titleKey: 'features.camera.title',
+    descKey: 'features.camera.desc',
+    metaKeys: ['features.camera.meta1', 'features.camera.meta2'],
+  },
+  {
+    icon: ParkingSquare,
+    titleKey: 'features.parking.title',
+    descKey: 'features.parking.desc',
+    metaKeys: ['features.parking.meta1', 'features.parking.meta2'],
+  },
+  {
+    icon: Building2,
+    titleKey: 'features.admin.title',
+    descKey: 'features.admin.desc',
+    metaKeys: ['features.admin.meta1', 'features.admin.meta2'],
+  },
+];
 
 export default function Features() {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'institutions' | 'parking'>('institutions');
-
-  const features = useMemo(
-    () =>
-      [1, 2, 3, 4, 5, 6].map((id, index) => ({
-        id,
-        icon: featureIcons[index],
-        title: t(`feat.${id}.title`),
-        description: t(`feat.${id}.desc`),
-      })),
-    [t],
-  );
-
-  const institutions = [
-    {
-      icon: Hospital,
-      title: t('institutions.1.title'),
-      description: t('institutions.1.desc'),
-    },
-    {
-      icon: University,
-      title: t('institutions.2.title'),
-      description: t('institutions.2.desc'),
-    },
-    {
-      icon: Building2,
-      title: t('institutions.3.title'),
-      description: t('institutions.3.desc'),
-    },
-  ];
-
-  const parking = [
-    {
-      icon: ParkingSquare,
-      title: t('parking.1.title'),
-      description: t('parking.1.desc'),
-    },
-    {
-      icon: CarFront,
-      title: t('parking.2.title'),
-      description: t('parking.2.desc'),
-    },
-    {
-      icon: ShieldCheck,
-      title: t('parking.3.title'),
-      description: t('parking.3.desc'),
-    },
-  ];
-
-  const activeItems = activeTab === 'institutions' ? institutions : parking;
 
   return (
     <>
-      <section className="bg-[#060708] py-24" id="features">
-        <div className="mx-auto max-w-6xl px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-[1fr_0.72fr] lg:items-end">
+      <section className="bg-[#060708] px-6 py-32 lg:px-10" id="features">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-20 flex flex-col justify-between gap-8 md:flex-row md:items-end">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#4B18B9]">{t('feat.eyebrow')}</p>
-              <h2 className="mt-4 max-w-2xl font-display text-4xl font-bold leading-[0.95] tracking-[-0.04em] text-[#F5F3EF] sm:text-5xl">
-                {t('feat.title')}
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#bac3ff]">{t('sectors.eyebrow')}</p>
+              <h2 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.055em] text-[#f5f3ef] md:text-6xl">
+                {t('sectors.title')}
               </h2>
             </div>
-            <p className="max-w-md text-sm leading-7 text-[#c5c0ba]">{t('feat.subtitle')}</p>
+            <p className="max-w-md text-base font-light leading-8 text-[#c5c5d6]">{t('sectors.desc')}</p>
           </div>
 
-          <div className="mt-14 grid gap-px bg-[#15191d] md:grid-cols-2 xl:grid-cols-3">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <motion.div
-                  key={feature.id}
-                  animate={{ opacity: 1, y: 0 }}
-                  initial={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.45, delay: index * 0.05 }}
-                  className="bg-[#0d1013] px-7 py-8"
-                >
-                    <div className="mb-6 inline-flex h-11 w-11 items-center justify-center bg-[#060708] text-[#F5F3EF]">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-[#F5F3EF]">{feature.title}</h3>
-                  <p className="mt-4 text-sm leading-7 text-[#c5c0ba]">{feature.description}</p>
-                </motion.div>
-              );
-            })}
+          <div className="grid gap-6 md:grid-cols-12 md:auto-rows-[360px]">
+            {sectorItems.map((sector, index) => (
+              <article
+                key={sector.titleKey}
+                className={`group relative overflow-hidden rounded-xl bg-[#121315] ${
+                  index === 0 ? 'md:col-span-12' : index === 1 ? 'md:col-span-8' : 'md:col-span-4'
+                }`}
+              >
+                <img
+                  alt={t(sector.titleKey)}
+                  className="h-full w-full object-cover opacity-38 grayscale transition-transform duration-700 group-hover:scale-105"
+                  src={sector.image}
+                />
+                <div className="absolute inset-0 bg-[#060708]/52" />
+                <div className="absolute inset-x-0 bottom-0 h-2/3 bg-[#060708]/62" />
+                <div className="absolute bottom-10 left-10 max-w-xl">
+                  <span className="rounded-lg bg-[#1836B9]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#bac3ff]">
+                    {t(sector.tagKey)}
+                  </span>
+                  <h3 className="mt-5 font-display text-4xl font-extrabold tracking-[-0.045em] text-[#f5f3ef]">
+                    {t(sector.titleKey)}
+                  </h3>
+                  <p className="mt-4 max-w-md text-sm font-light leading-7 text-[#c5c5d6]">{t(sector.descKey)}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-[#0d1013] py-24" id="solutions">
-        <div className="mx-auto max-w-6xl px-6 lg:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-8">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#4B18B9]">{t('solutions.eyebrow')}</p>
-              <h2 className="mt-4 font-display text-4xl font-bold uppercase tracking-[-0.04em] text-[#F5F3EF] sm:text-5xl">
-                {t('solutions.title')}
-              </h2>
-            </div>
-            <div className="flex border border-[#15191d]">
-              <button
-                className={`px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
-                  activeTab === 'institutions' ? 'bg-[#1836B9] text-[#F5F3EF]' : 'bg-[#060708] text-[#c5c0ba] hover:text-[#F5F3EF]'
-                }`}
-                onClick={() => setActiveTab('institutions')}
-                type="button"
-              >
-                {t('solutions.tab.institutions')}
-              </button>
-              <button
-                className={`px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
-                  activeTab === 'parking' ? 'bg-[#1836B9] text-[#F5F3EF]' : 'bg-[#060708] text-[#c5c0ba] hover:text-[#F5F3EF]'
-                }`}
-                onClick={() => setActiveTab('parking')}
-                type="button"
-              >
-                {t('solutions.tab.parking')}
-              </button>
-            </div>
+      <section className="bg-[#060708] px-6 py-28 lg:px-10" id="solutions">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {featureItems.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <article
+                  key={feature.titleKey}
+                  className="group rounded-xl bg-[#121315] p-10 transition-colors duration-300 hover:bg-[#1f2021]"
+                >
+                  <Icon className="h-9 w-9 text-[#1836B9]" />
+                  <h3 className="mt-8 font-display text-2xl font-extrabold tracking-[-0.04em] text-[#f5f3ef]">
+                    {t(feature.titleKey)}
+                  </h3>
+                  <p className="mt-5 text-sm font-light leading-7 text-[#c5c5d6]">{t(feature.descKey)}</p>
+                  <div className="mt-8 space-y-3 pt-6">
+                    {feature.metaKeys.map((item) => (
+                      <div
+                        key={item}
+                        className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/42 transition-colors group-hover:text-[#bac3ff]"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#bac3ff]" />
+                        {t(item)}
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
           </div>
-
-          <div className="sr-only" id="institutions" />
-          <div className="sr-only" id="parking" />
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
-              initial={{ opacity: 0, y: 12 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-              className="mt-14 grid gap-px bg-[#15191d] md:grid-cols-3"
-              id={activeTab === 'institutions' ? 'institutions' : 'parking'}
-            >
-              {activeItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <article key={item.title} className="bg-[#060708] px-7 py-8">
-                    <div className="mb-6 inline-flex h-11 w-11 items-center justify-center bg-[#15191d] text-[#F5F3EF]">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <h3 className="text-base font-bold uppercase tracking-[0.08em] text-[#F5F3EF]">{item.title}</h3>
-                    <p className="mt-4 text-sm leading-7 text-[#c5c0ba]">{item.description}</p>
-                  </article>
-                );
-              })}
-            </motion.div>
-          </AnimatePresence>
         </div>
       </section>
     </>

@@ -34,9 +34,9 @@ function App() {
           <LanguageToggle />
           <TopBar />
           <Hero />
+          <Features />
           <HowItWorks />
           <AboutSection />
-          <Features />
           <TechStack />
           <Footer />
         </div>
