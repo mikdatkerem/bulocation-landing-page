@@ -9,13 +9,25 @@
   --color-blue-50: #DBEAFE;
 }
 
+:root {
+  --bulocation-bg: #060708;
+  --bulocation-surface: #0d1013;
+  --bulocation-surface-soft: #15191d;
+  --bulocation-white: #F5F3EF;
+  --bulocation-primary: #1836B9;
+  --bulocation-secondary: #4B18B9;
+  --bulocation-accent: #9B18B9;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
   }
 
   body {
-    @apply bg-[#0E0E0F] text-white font-sans antialiased;
+    @apply font-sans antialiased;
+    background: var(--bulocation-bg);
+    color: var(--bulocation-white);
   }
 
   body, #root {

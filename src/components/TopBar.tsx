@@ -9,10 +9,10 @@ export default function TopBar({ active = 'home' }: TopBarProps) {
   const { t } = useLanguage();
 
   const linkClassName = (isActive: boolean) =>
-    `transition-colors ${isActive ? 'text-white' : 'text-slate-500 hover:text-white'}`;
+    `border-b-2 pb-1 transition-colors ${isActive ? 'border-[#1836B9] text-[#F5F3EF]' : 'border-transparent text-[#9da3ad] hover:text-[#F5F3EF]'}`;
 
   return (
-    <header className="bg-[#0E0E0F]">
+    <header className="bg-[#060708]">
       <div className="mx-auto grid h-28 max-w-6xl grid-cols-[1fr_auto] items-center px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
         <a className="relative block h-16 w-72 justify-self-start overflow-visible lg:-ml-2 lg:w-80" href="/">
           <img
@@ -21,7 +21,7 @@ export default function TopBar({ active = 'home' }: TopBarProps) {
             src="/logo_removed_bg.png"
           />
         </a>
-        <nav className="flex items-center justify-end gap-6 text-[11px] font-semibold uppercase tracking-[0.22em]">
+        <nav className="flex items-center justify-end gap-8 text-[11px] font-semibold uppercase tracking-[0.22em]">
           <motion.a
             className={linkClassName(active === 'services')}
             href="/hizmetlerimiz"

@@ -14,16 +14,16 @@ export default function HowItWorks() {
   }));
 
   return (
-    <section className="bg-[#0E0E0F] py-24" id="how-it-works">
+    <section className="bg-[#0d1013] py-24" id="how-it-works">
       <div className="mx-auto max-w-6xl px-6 lg:px-8">
         <div className="mb-14 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#85ADFF]">{t('hiw.eyebrow')}</p>
-          <h2 className="mt-4 font-display text-4xl font-bold uppercase tracking-[-0.04em] text-white sm:text-5xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#4B18B9]">{t('hiw.eyebrow')}</p>
+          <h2 className="mt-4 font-display text-4xl font-bold uppercase tracking-[-0.04em] text-[#F5F3EF] sm:text-5xl">
             {t('hiw.title')}
           </h2>
         </div>
 
-        <div className="grid gap-px bg-white/5 md:grid-cols-3">
+        <div className="grid gap-px bg-[#15191d] md:grid-cols-3">
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
@@ -32,13 +32,13 @@ export default function HowItWorks() {
                 animate={{ opacity: 1, y: 0 }}
                 initial={{ opacity: 0, y: 26 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-[#131314] px-8 py-10"
+                className="bg-[#060708] px-8 py-10"
               >
-                <div className="mb-8 inline-flex h-12 w-12 items-center justify-center bg-[#201F21] text-[#85ADFF]">
+                <div className="mb-8 inline-flex h-12 w-12 items-center justify-center bg-[#15191d] text-[#F5F3EF]">
                   <Icon className="h-4 w-4" />
                 </div>
-                <h3 className="text-base font-bold uppercase tracking-[0.08em] text-white">{step.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-slate-400">{step.description}</p>
+                <h3 className="text-base font-bold uppercase tracking-[0.08em] text-[#F5F3EF]">{step.title}</h3>
+                <p className="mt-4 text-sm leading-7 text-[#c5c0ba]">{step.description}</p>
               </motion.div>
             );
           })}

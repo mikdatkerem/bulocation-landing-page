@@ -30,7 +30,7 @@ function App() {
           <ServicesPage />
         </>
       ) : (
-        <div className="min-h-screen bg-[#0E0E0F] font-sans selection:bg-[#85ADFF] selection:text-[#002C66]" id="top">
+        <div className="min-h-screen font-sans selection:bg-[#1836B9] selection:text-[#F5F3EF]" id="top">
           <LanguageToggle />
           <TopBar />
           <Hero />
