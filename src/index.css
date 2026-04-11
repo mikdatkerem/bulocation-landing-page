@@ -90,17 +90,17 @@
 
   .admin-shell .text-slate-950,
   .admin-shell .text-slate-900 {
-    color: #f8fbff !important;
+    color: var(--bulocation-white) !important;
   }
 
   .admin-shell .text-slate-700,
   .admin-shell .text-slate-600,
   .admin-shell .text-slate-500 {
-    color: #c2d0e8 !important;
+    color: #c7ccd4 !important;
   }
 
   .admin-shell .text-slate-400 {
-    color: #8ea3c8 !important;
+    color: #8f96a3 !important;
   }
 
   .admin-shell [class*='bg-slate-50'],
@@ -167,5 +167,122 @@
   .admin-shell [class*='shadow-[0_24px_60px'],
   .admin-shell [class*='shadow-[0_18px_45px'] {
     box-shadow: 0 20px 48px rgba(2, 6, 23, 0.28) !important;
+  }
+
+  .admin-shell {
+    background:
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)),
+      var(--bulocation-bg);
+    color: var(--bulocation-white);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .admin-shell .admin-panel-card {
+    border-radius: 8px;
+    border: 1px solid rgba(245, 243, 239, 0.08);
+    background: rgba(13, 16, 19, 0.96);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  }
+
+  .admin-shell .admin-panel-subtle {
+    border-radius: 8px;
+    border: 1px solid rgba(245, 243, 239, 0.08);
+    background: rgba(21, 25, 29, 0.88);
+  }
+
+  .admin-shell .admin-kicker {
+    color: #8f96a3;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .admin-shell .admin-heading {
+    color: var(--bulocation-white);
+    font-family: 'Manrope', sans-serif;
+    letter-spacing: -0.04em;
+  }
+
+  .admin-shell .admin-copy {
+    color: #b5bcc7;
+  }
+
+  .admin-shell .admin-input {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid rgba(245, 243, 239, 0.1);
+    background: rgba(9, 11, 13, 0.95);
+    color: var(--bulocation-white);
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .admin-shell .admin-input::placeholder {
+    color: #6e7683;
+  }
+
+  .admin-shell .admin-input:focus {
+    border-color: rgba(24, 54, 185, 0.85);
+    background: rgba(12, 15, 19, 0.98);
+    box-shadow: 0 0 0 3px rgba(24, 54, 185, 0.16);
+    outline: none;
+  }
+
+  .admin-shell .admin-action {
+    border-radius: 6px;
+    border: 1px solid rgba(245, 243, 239, 0.1);
+    background: rgba(21, 25, 29, 0.9);
+    color: #e7e3dc;
+  }
+
+  .admin-shell .admin-action:hover {
+    border-color: rgba(245, 243, 239, 0.18);
+    background: rgba(27, 31, 36, 0.94);
+  }
+
+  .admin-shell .admin-action-accent {
+    border-color: rgba(24, 54, 185, 0.42);
+    background: rgba(24, 54, 185, 0.18);
+    color: #f5f3ef;
+  }
+
+  .admin-shell .admin-action-accent:hover {
+    border-color: rgba(24, 54, 185, 0.62);
+    background: rgba(24, 54, 185, 0.26);
+  }
+
+  .admin-shell .admin-action-danger {
+    border-color: rgba(187, 63, 63, 0.34);
+    background: rgba(77, 18, 18, 0.28);
+    color: #ffd8d8;
+  }
+
+  .admin-shell .admin-action-danger:hover {
+    border-color: rgba(187, 63, 63, 0.48);
+    background: rgba(92, 20, 20, 0.36);
+  }
+
+  .admin-shell .admin-map-shell {
+    border-radius: 8px;
+    border: 1px solid rgba(245, 243, 239, 0.08);
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      #0a0c0f;
+    background-size: 28px 28px, 28px 28px, auto;
+    overflow: hidden;
+  }
+
+  .admin-shell .admin-map-toolbar {
+    border-bottom: 1px solid rgba(245, 243, 239, 0.08);
+    background: rgba(13, 16, 19, 0.94);
+  }
+
+  .admin-shell .admin-pill {
+    border-radius: 6px;
+    border: 1px solid rgba(245, 243, 239, 0.1);
+    background: rgba(9, 11, 13, 0.92);
+    color: #e7e3dc;
   }
 }

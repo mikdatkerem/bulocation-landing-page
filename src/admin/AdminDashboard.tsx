@@ -297,7 +297,7 @@ function formatDate(value: string | null | undefined) {
 function FieldShell({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+      <span className="admin-kicker mb-2 block">
         {label}
       </span>
       {children}
@@ -382,7 +382,7 @@ function SearchableSelect({
 }
 
 function inputClassName() {
-  return 'w-full rounded-[6px] border border-[#23314d] bg-[#0f1727] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[#4f6ea8] focus:bg-[#111c30]';
+  return 'admin-input px-4 py-3 text-sm';
 }
 
 function selectClassName() {
@@ -390,7 +390,7 @@ function selectClassName() {
 }
 
 function sectionCardClassName() {
-  return 'rounded-[8px] border border-[#1f2c45] bg-[#101927] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)] lg:p-8';
+  return 'admin-panel-card p-6 lg:p-8';
 }
 
 function CodeGuide({ children }: { children: ReactNode }) {
@@ -400,25 +400,25 @@ function CodeGuide({ children }: { children: ReactNode }) {
 function rowCardClassName(active = false) {
   return `w-full rounded-[8px] border px-4 py-4 text-left transition ${
     active
-      ? 'border-[#4f6ea8] bg-[#16233a] text-white shadow-[0_20px_40px_rgba(2,6,23,0.28)]'
-      : 'border-[#1f2c45] bg-[#0d1422] text-slate-200 hover:border-[#31486f] hover:bg-[#111b2d]'
+      ? 'border-[#1836B9] bg-[#101520] text-[#F5F3EF] shadow-[0_20px_40px_rgba(0,0,0,0.28)]'
+      : 'border-[rgba(245,243,239,0.08)] bg-[#0d1013] text-[#d7d2ca] hover:border-[rgba(245,243,239,0.16)] hover:bg-[#14181d]'
   }`;
 }
 
 function subtlePanelClassName() {
-  return 'rounded-[8px] border border-[#1f2c45] bg-[#0d1422]';
+  return 'admin-panel-subtle';
 }
 
 function actionButtonClassName(tone: 'neutral' | 'danger' | 'accent' = 'neutral') {
   if (tone === 'danger') {
-    return 'inline-flex items-center gap-2 rounded-[6px] border border-rose-500/30 bg-rose-950/30 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:border-rose-400/50 hover:bg-rose-900/40';
+    return 'admin-action admin-action-danger inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
   }
 
   if (tone === 'accent') {
-    return 'inline-flex items-center gap-2 rounded-[6px] border border-[#38558a] bg-[#16233a] px-3 py-1.5 text-xs font-medium text-[#dce7ff] transition hover:border-[#4f6ea8] hover:bg-[#1a2a43]';
+    return 'admin-action admin-action-accent inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
   }
 
-  return 'inline-flex items-center gap-2 rounded-[6px] border border-[#2b3d5f] bg-[#101927] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-[#3a527e] hover:bg-[#132035]';
+  return 'admin-action inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
 }
 
 function topNavTabs(activeViewLabel: string) {
@@ -1806,7 +1806,7 @@ export default function AdminDashboard() {
 
     if (!mapEditor.assetContentType.startsWith('image/')) {
       return (
-        <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm leading-6 text-slate-500">
+        <div className="admin-panel-subtle rounded-[8px] border-dashed p-6 text-sm leading-6 text-[#8f96a3]">
           Bu surum gorsel olmayan bir dosya turu kullaniyor. PDF veya baska formatlar icin su anda sadece
           liste tabanli editor aktif.
         </div>
@@ -1816,13 +1816,13 @@ export default function AdminDashboard() {
     const nodeMap = new globalThis.Map(mapEditor.nodes.map((node) => [node.id, node]));
 
     return (
-      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-300">
+      <div className="admin-map-shell">
+        <div className="admin-map-toolbar flex items-center justify-between px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#8f96a3]">
           <span>Gorsel editor</span>
           <span>Dugume tikla duzenle, bos alana tikla yeni koordinat sec</span>
         </div>
         <div
-          className="relative cursor-crosshair bg-slate-900"
+          className="relative cursor-crosshair bg-[#090b0d]"
           onClick={handleMapCanvasClick}
           style={{ aspectRatio: `${mapEditor.width} / ${mapEditor.height}` }}
         >
@@ -1875,9 +1875,9 @@ export default function AdminDashboard() {
                       <button
                         className={`border px-2 py-1 text-[10px] font-semibold shadow-lg transition ${
                           selected
-                            ? 'border-blue-200 bg-blue-500 text-white'
-                            : 'border-white/70 bg-white/90 text-slate-900'
-                        } ${showQrPreview ? 'rounded-2xl' : 'rounded-full'}`}
+                            ? 'border-[#1836B9] bg-[#1836B9] text-[#F5F3EF]'
+                            : 'border-[rgba(245,243,239,0.12)] bg-[#0f1216] text-[#F5F3EF]'
+                        } ${showQrPreview ? 'rounded-[8px]' : 'rounded-full'}`}
                         onClick={(event) => {
                           event.stopPropagation();
                           startNodeEdit(node);
@@ -1889,7 +1889,7 @@ export default function AdminDashboard() {
                             <img
                               alt={`${node.code} mini qr`}
                               className={`h-4 w-4 rounded-[4px] border ${
-                                selected ? 'border-white/40 bg-white p-0.5' : 'border-slate-200 bg-white p-0.5'
+                                selected ? 'border-white/30 bg-white p-0.5' : 'border-white/10 bg-white p-0.5'
                               }`}
                               src={qrPreview}
                             />
@@ -1902,8 +1902,8 @@ export default function AdminDashboard() {
                       aria-label={hidden ? `${node.code} goster` : `${node.code} gizle`}
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full border shadow-sm transition ${
                         hidden
-                          ? 'border-amber-200 bg-amber-50 text-amber-700'
-                          : 'border-white/70 bg-white/90 text-slate-700'
+                          ? 'border-[#9B18B9]/30 bg-[#9B18B9]/15 text-[#e9d6ff]'
+                          : 'border-[rgba(245,243,239,0.12)] bg-[#0f1216] text-[#d7d2ca]'
                       }`}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -1956,7 +1956,7 @@ export default function AdminDashboard() {
   function renderCameraZoneCanvas() {
     if (!cameraZoneForm.mapVersionId) {
       return (
-        <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+        <div className="admin-panel-subtle rounded-[8px] border-dashed p-5 text-sm text-[#8f96a3]">
           Polygon cizmek icin once bir harita surumu sec.
         </div>
       );
@@ -1964,7 +1964,7 @@ export default function AdminDashboard() {
 
     if (!cameraZoneMapEditor) {
       return (
-        <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+        <div className="admin-panel-subtle rounded-[8px] border-dashed p-5 text-sm text-[#8f96a3]">
           Harita surumu yukleniyor.
         </div>
       );
@@ -1972,7 +1972,7 @@ export default function AdminDashboard() {
 
     if (!cameraZoneMapEditor.assetContentType.startsWith('image/')) {
       return (
-        <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+        <div className="admin-panel-subtle rounded-[8px] border-dashed p-5 text-sm text-[#8f96a3]">
           Kamera bolgesi cizimi su anda yalnizca gorsel haritalarda destekleniyor.
         </div>
       );
@@ -1991,13 +1991,13 @@ export default function AdminDashboard() {
     ).filter((value) => value > 0 && value < cameraZoneMapEditor.height);
 
     return (
-      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-300">
+      <div className="admin-map-shell">
+        <div className="admin-map-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#8f96a3]">
           <span>Polygon editor</span>
           <span>{CAMERA_ZONE_GRID_SIZE}px grid ile snap aktif</span>
         </div>
         <div
-          className="relative cursor-crosshair bg-slate-900"
+          className="relative cursor-crosshair bg-[#090b0d]"
           onClick={handleCameraZoneCanvasClick}
           style={{ aspectRatio: `${cameraZoneMapEditor.width} / ${cameraZoneMapEditor.height}` }}
         >
@@ -3305,8 +3305,8 @@ export default function AdminDashboard() {
       <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
         <div className="space-y-6">
           <div className={sectionCardClassName()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Harita dosyasi yukleme</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Kat krokisini depolamaya gonder</h3>
+            <p className="admin-kicker">Harita dosyasi yukleme</p>
+            <h3 className="admin-heading mt-2 text-2xl font-semibold">Kat krokisini depolamaya gonder</h3>
             <div className="mt-6 space-y-4">
               <FieldShell label="Dosya">
                 <input
@@ -3317,7 +3317,7 @@ export default function AdminDashboard() {
                 />
               </FieldShell>
               {uploadedAsset ? (
-                <div className={`${subtlePanelClassName()} p-4 text-sm text-slate-300`}>
+                <div className={`${subtlePanelClassName()} p-4 text-sm text-[#b5bcc7]`}>
                   <p className="font-semibold text-white">{uploadedAsset.originalFileName}</p>
                   <p className="mt-1">{uploadedAsset.relativePath}</p>
                 </div>
@@ -3326,8 +3326,8 @@ export default function AdminDashboard() {
           </div>
 
           <div className={sectionCardClassName()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Surum olustur</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">Yayina hazir harita taslaklari</h3>
+            <p className="admin-kicker">Surum olustur</p>
+            <h3 className="admin-heading mt-2 text-2xl font-semibold">Yayina hazir harita taslaklari</h3>
             <div className="mt-6 grid gap-4">
               <SearchableSelect
                 label="Organizasyon"
@@ -3412,7 +3412,7 @@ export default function AdminDashboard() {
                 </FieldShell>
               </div>
                 <button
-                  className="inline-flex items-center justify-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
                   disabled={busy || !uploadedAsset || !mapVersionForm.floorId || !mapVersionForm.name.trim()}
                   onClick={handleCreateMapVersion}
                   type="button"
@@ -3424,11 +3424,11 @@ export default function AdminDashboard() {
           </div>
 
           <div className={sectionCardClassName()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Harita surumleri</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">Taslak veya yayindaki editoru sec</h3>
+            <p className="admin-kicker">Harita surumleri</p>
+            <h3 className="admin-heading mt-2 text-2xl font-semibold">Taslak veya yayindaki editoru sec</h3>
             <div className="mt-6 space-y-3">
               {filteredMapVersions.length === 0 ? (
-                <div className="border border-dashed border-[#2b3d5f] bg-[#0d1422] p-5 text-sm text-slate-400">
+                <div className="admin-panel-subtle border-dashed p-5 text-sm text-[#8f96a3]">
                   Secili filtreler icin henuz harita surumu yok.
                 </div>
               ) : (
@@ -3454,7 +3454,7 @@ export default function AdminDashboard() {
                             {version.floorCode} - {version.floorName}
                           </p>
                         </div>
-                        <span className="border border-[#2b3d5f] bg-[#0d1422] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+                        <span className="admin-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                           {statusLabel(version.status)}
                         </span>
                       </div>
@@ -3484,14 +3484,14 @@ export default function AdminDashboard() {
           <div className={sectionCardClassName()}>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Harita editoru</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-950">
+                <p className="admin-kicker">Harita editoru</p>
+                <h3 className="admin-heading mt-2 text-2xl font-semibold">
                   {mapEditor ? mapEditor.name : 'Bir harita surumu sec'}
                 </h3>
               </div>
               {mapEditor ? (
                 <button
-                  className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className="admin-action admin-action-accent inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
                   disabled={busy}
                   onClick={handlePublishMapVersion}
                   type="button"
@@ -3504,27 +3504,27 @@ export default function AdminDashboard() {
 
             {mapEditor ? (
               <div className="mt-6 grid gap-4 md:grid-cols-4">
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Durum</p>
-                  <p className="mt-2 text-lg font-semibold text-slate-950">{statusLabel(mapEditor.status)}</p>
+                <div className="admin-panel-subtle p-4">
+                  <p className="admin-kicker">Durum</p>
+                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">{statusLabel(mapEditor.status)}</p>
                 </div>
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Boyut</p>
-                  <p className="mt-2 text-lg font-semibold text-slate-950">
+                <div className="admin-panel-subtle p-4">
+                  <p className="admin-kicker">Boyut</p>
+                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">
                     {mapEditor.width} x {mapEditor.height}
                   </p>
                 </div>
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Dugum</p>
-                  <p className="mt-2 text-lg font-semibold text-slate-950">{mapEditor.nodes.length}</p>
+                <div className="admin-panel-subtle p-4">
+                  <p className="admin-kicker">Dugum</p>
+                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">{mapEditor.nodes.length}</p>
                 </div>
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Baglanti</p>
-                  <p className="mt-2 text-lg font-semibold text-slate-950">{mapEditor.connections.length}</p>
+                <div className="admin-panel-subtle p-4">
+                  <p className="admin-kicker">Baglanti</p>
+                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">{mapEditor.connections.length}</p>
                 </div>
               </div>
             ) : (
-              <div className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+              <div className="admin-panel-subtle mt-6 border-dashed p-5 text-sm text-[#8f96a3]">
                 Once bir harita surumu sec veya olustur.
               </div>
             )}
@@ -3534,7 +3534,7 @@ export default function AdminDashboard() {
 
           <div className="grid gap-6 xl:grid-cols-2">
             <div className={sectionCardClassName()}>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Dugum ekle</p>
+              <p className="admin-kicker">Dugum ekle</p>
               <div className="mt-6 grid gap-4">
                 <FieldShell label="Etiket">
                   <input
@@ -3587,7 +3587,7 @@ export default function AdminDashboard() {
                       ? 'Bu nokta kaydedildiginde QR kodu sistem tarafinda otomatik olusturulur.'
                       : 'Kisitli alan cizgisinde sadece tur, etiket ve koordinat bilgisi tutulur.'}
                 </CodeGuide>
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700">
+                <label className="admin-panel-subtle flex items-center gap-3 px-4 py-3 text-sm text-[#d7d2ca]">
                   <input
                     checked={nodeForm.isAccessible}
                     onChange={(event) =>
@@ -3598,7 +3598,7 @@ export default function AdminDashboard() {
                   Erisilebilir dugum
                 </label>
                 <button
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
                   disabled={busy || !selectedMapVersionId || !nodeForm.label.trim()}
                   onClick={mapEditorSelection.editingNodeId ? handleUpdateNode : handleAddNode}
                   type="button"
@@ -3608,27 +3608,27 @@ export default function AdminDashboard() {
                 </button>
                 {selectedMapNode && nodeTypeGeneratesQr(selectedMapNode.nodeType) ? (
                   <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    <p className="admin-kicker">
                       Otomatik QR
                     </p>
-                    <p className="mt-2 text-sm font-semibold text-slate-950">
+                    <p className="mt-2 text-sm font-semibold text-[#F5F3EF]">
                       {selectedMapNode.code} - {selectedMapNode.label}
                     </p>
                     {selectedNodeQrDataUrl ? (
                       <div className="mt-4 flex items-center gap-4">
                         <img
                           alt={`${selectedMapNode.code} QR`}
-                          className="h-32 w-32 rounded-2xl border border-slate-200 bg-white p-3"
+                          className="h-32 w-32 rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-white p-3"
                           src={selectedNodeQrDataUrl}
                         />
-                        <div className="space-y-3 text-xs leading-6 text-slate-500">
+                        <div className="space-y-3 text-xs leading-6 text-[#8f96a3]">
                           <div>
                             Bu QR kod mobil uygulamada dogrudan ilgili noktayi acar.
                             <br />
                             Park noktalarinda canli takip ayni nokta kaydi uzerinden ilerler.
                           </div>
                           <a
-                            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+                            className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
                             download={`${selectedMapNode.code.toLowerCase()}-qr.png`}
                             href={selectedNodeQrDataUrl}
                           >
@@ -3643,7 +3643,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className={sectionCardClassName()}>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Baglanti ekle</p>
+              <p className="admin-kicker">Baglanti ekle</p>
               <div className="mt-6 grid gap-4">
                 <FieldShell label="Baslangic dugumu">
                   <select
@@ -3692,7 +3692,7 @@ export default function AdminDashboard() {
                     }
                   />
                 </FieldShell>
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700">
+                <label className="admin-panel-subtle flex items-center gap-3 px-4 py-3 text-sm text-[#d7d2ca]">
                   <input
                     checked={connectionForm.isBidirectional}
                     onChange={(event) =>
@@ -3705,7 +3705,7 @@ export default function AdminDashboard() {
                   />
                   Cift yonlu
                 </label>
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700">
+                <label className="admin-panel-subtle flex items-center gap-3 px-4 py-3 text-sm text-[#d7d2ca]">
                   <input
                     checked={connectionForm.isAccessible}
                     onChange={(event) =>
@@ -3719,7 +3719,7 @@ export default function AdminDashboard() {
                   Erisilebilir baglanti
                 </label>
                 <button
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
                   disabled={
                     busy ||
                     !selectedMapVersionId ||
@@ -3739,29 +3739,29 @@ export default function AdminDashboard() {
 
           {mapEditor ? (
             <div className={sectionCardClassName()}>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Mevcut grafik</p>
+              <p className="admin-kicker">Mevcut grafik</p>
               <div className="mt-6 grid gap-6 xl:grid-cols-2">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Dugumler</p>
+                  <p className="text-sm font-semibold text-[#F5F3EF]">Dugumler</p>
                   <div className="mt-4 space-y-3">
                     {mapEditor.nodes.map((node: FacilityMapNode) => (
-                      <div key={node.id} className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
-                        <p className="text-sm font-semibold text-slate-900">
+                      <div key={node.id} className="admin-panel-subtle p-4">
+                        <p className="text-sm font-semibold text-[#F5F3EF]">
                           {node.code} - {node.label}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-[#8f96a3]">
                           {enumLabel(node.nodeType, nodeTypeOptions)} - ({node.pixelX}, {node.pixelY})
                         </p>
                         <div className="mt-3 flex gap-2">
-                          <button className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700" onClick={() => startNodeEdit(node)} type="button">Duzenle</button>
-                          <button className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700" onClick={() => void handleDeleteNode(node.id)} type="button">Sil</button>
+                          <button className={actionButtonClassName('neutral')} onClick={() => startNodeEdit(node)} type="button">Duzenle</button>
+                          <button className={actionButtonClassName('danger')} onClick={() => void handleDeleteNode(node.id)} type="button">Sil</button>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Baglantilar</p>
+                  <p className="text-sm font-semibold text-[#F5F3EF]">Baglantilar</p>
                   <div className="mt-4 space-y-3">
                     {mapEditor.connections.map((connection: FacilityMapConnection) => (
                       <div
@@ -4264,19 +4264,19 @@ export default function AdminDashboard() {
           : 'Search...';
 
   return (
-    <div className="admin-shell min-h-screen bg-[#0b121d] text-slate-100">
+    <div className="admin-shell min-h-screen text-slate-100">
       <div className="flex min-h-screen">
-        <aside className="hidden w-[284px] shrink-0 border-r border-[#1f2c45] bg-[#0c1524] px-6 py-8 xl:block">
+        <aside className="hidden w-[284px] shrink-0 border-r border-[rgba(245,243,239,0.08)] bg-[#090b0d] px-6 py-8 xl:block">
           <div className="mb-10 space-y-4">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center border border-[#2b3d5f] bg-[#15233a] text-[#9bb4e8]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-[#0d1013] text-[#F5F3EF]">
                 <Map className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-[2rem] font-semibold tracking-[-0.03em] text-[#eef3ff]">
+                <h1 className="font-display text-[2rem] font-semibold tracking-[-0.04em] text-[#F5F3EF]">
                   Bulocation
                 </h1>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#8ea3c8]">
+                <p className="mt-1 font-display text-[11px] font-bold uppercase tracking-[0.22em] text-[#8f96a3]">
                   Enterprise Admin
                 </p>
               </div>
@@ -4291,8 +4291,8 @@ export default function AdminDashboard() {
                   key={key}
                   className={`flex w-full items-center gap-3 rounded-none border px-4 py-3 text-left text-sm transition ${
                     active
-                      ? 'border-[#4f6ea8] bg-[#16233a] text-white'
-                      : 'border-transparent text-slate-400 hover:border-[#23314d] hover:bg-[#101a2c] hover:text-white'
+                      ? 'border-[#1836B9] bg-[#0f141c] text-[#F5F3EF]'
+                      : 'border-transparent text-[#8f96a3] hover:border-[rgba(245,243,239,0.08)] hover:bg-[#0d1013] hover:text-[#F5F3EF]'
                   }`}
                   onClick={() => setActiveView(key)}
                   type="button"
@@ -4305,18 +4305,18 @@ export default function AdminDashboard() {
             })}
           </nav>
 
-          <div className="mt-auto border border-[#1f2c45] bg-[#101927] p-4">
+          <div className="admin-panel-card mt-auto p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center overflow-hidden border border-[#2b3d5f] bg-[#15233a] text-sm font-semibold text-[#eef3ff]">
+              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-[#0d1013] text-sm font-semibold text-[#F5F3EF]">
                 {(profile?.fullName ?? 'A').slice(0, 1)}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#eef3ff]">{profile?.fullName}</p>
-                <p className="truncate text-xs text-[#8ea3c8]">{profile?.email}</p>
+                <p className="truncate text-sm font-semibold text-[#F5F3EF]">{profile?.fullName}</p>
+                <p className="truncate text-xs text-[#8f96a3]">{profile?.email}</p>
               </div>
             </div>
             <button
-              className="mt-4 flex w-full items-center justify-center gap-2 border border-[#263654] bg-[#15233a] px-4 py-3 text-sm font-semibold text-[#eef3ff]"
+              className="admin-action mt-4 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-semibold"
               onClick={handleLogout}
               type="button"
             >
@@ -4328,12 +4328,12 @@ export default function AdminDashboard() {
 
         <main className="flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
           <div className="mx-auto max-w-[1480px] space-y-6">
-            <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1f2c45] pb-5">
+            <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(245,243,239,0.08)] pb-5">
               <div className="flex flex-wrap items-center gap-6">
                 <div className="relative min-w-[320px] max-w-[360px] flex-1">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9bb4e8]" />
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8f96a3]" />
                   <input
-                    className="h-12 w-full border border-[#1f2c45] bg-black px-12 text-sm text-[#eef3ff] outline-none placeholder:text-[#66789a]"
+                    className="admin-input h-12 px-12 text-sm"
                     placeholder={topSearchPlaceholder}
                   />
                 </div>
@@ -4345,8 +4345,8 @@ export default function AdminDashboard() {
                         key={tab}
                         className={`border-b-2 pb-1 text-sm font-semibold ${
                           active
-                            ? 'border-[#9bb4e8] text-[#eef3ff]'
-                            : 'border-transparent text-[#a8b8d8]'
+                            ? 'border-[#1836B9] text-[#F5F3EF]'
+                            : 'border-transparent text-[#8f96a3]'
                         }`}
                       >
                         {tab}
@@ -4356,10 +4356,10 @@ export default function AdminDashboard() {
                 </nav>
               </div>
               <div className="flex items-center gap-3">
-                <button className="flex h-11 w-11 items-center justify-center border border-[#1f2c45] bg-[#101927] text-[#cdd8ef]" type="button">
+                <button className="admin-action flex h-11 w-11 items-center justify-center" type="button">
                   <Bell className="h-4 w-4" />
                 </button>
-                <button className="flex h-11 w-11 items-center justify-center border border-[#1f2c45] bg-[#101927] text-[#cdd8ef]" type="button">
+                <button className="admin-action flex h-11 w-11 items-center justify-center" type="button">
                   <HelpCircle className="h-4 w-4" />
                 </button>
               </div>
