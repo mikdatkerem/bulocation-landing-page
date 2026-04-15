@@ -158,6 +158,8 @@ export type MapAsset = {
   relativePath: string;
   contentType: string;
   sizeBytes: number;
+  width?: number | null;
+  height?: number | null;
 };
 
 export type FacilityMapNode = {
@@ -197,10 +199,71 @@ export type MapVersionEditor = {
   connections: FacilityMapConnection[];
 };
 
-export type ApiError = {
+export type ApiProblem = {
+  status?: number;
   title?: string;
   detail?: string;
+  code?: string;
+  traceId?: string;
+  errors?: Record<string, string[]>;
 };
+
+export class ApiClientError extends Error {
+  status?: number;
+  title?: string;
+  detail?: string;
+  code?: string;
+  traceId?: string;
+  errors?: Record<string, string[]>;
+
+  constructor(problem: ApiProblem, fallbackMessage: string) {
+    super(problem.detail || problem.title || fallbackMessage);
+    this.name = 'ApiClientError';
+    this.status = problem.status;
+    this.title = problem.title;
+    this.detail = problem.detail;
+    this.code = problem.code;
+    this.traceId = problem.traceId;
+    this.errors = problem.errors;
+  }
+}
+
+export function isApiClientError(error: unknown): error is ApiClientError {
+  return error instanceof ApiClientError;
+}
+
+export function getApiFieldErrors(error: unknown): Record<string, string[]> | null {
+  return isApiClientError(error) ? error.errors ?? null : null;
+}
+
+export function getApiErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (!isApiClientError(error)) {
+    return error instanceof Error ? error.message : fallbackMessage;
+  }
+
+  switch (error.code) {
+    case 'auth.invalid_credentials':
+      return 'E-posta veya kullanici adi ya da sifre hatali.';
+    case 'auth.account_locked':
+      return 'Hesap gecici olarak kilitlendi. Bir sure sonra tekrar deneyin.';
+    case 'auth.account_inactive':
+      return 'Hesap aktif degil. Sistem yoneticinizle iletisime gecin.';
+    case 'auth.invalid_current_password':
+      return 'Mevcut sifre hatali.';
+    case 'conflict.email_in_use':
+      return 'Bu e-posta adresi zaten kullaniliyor.';
+    case 'conflict.username_in_use':
+      return 'Bu kullanici adi zaten kullaniliyor.';
+    case 'validation_failed': {
+      const firstError = Object.values(error.errors ?? {}).flat()[0];
+      return firstError || 'Form alanlarini kontrol edin.';
+    }
+    case 'invalid_token':
+      return 'Oturum bilginiz gecerli degil. Lutfen tekrar giris yapin.';
+    default:
+      return error.detail || error.title || fallbackMessage;
+  }
+}
 
 const API_BASE = '/admin-api';
 
@@ -226,14 +289,24 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    let error: ApiError | undefined;
+    let error: ApiProblem | undefined;
     try {
-      error = (await response.json()) as ApiError;
+      error = (await response.json()) as ApiProblem;
     } catch {
       error = undefined;
     }
 
-    throw new Error(error?.detail || error?.title || `Request failed with ${response.status}`);
+    throw new ApiClientError(
+      {
+        status: response.status,
+        title: error?.title,
+        detail: error?.detail,
+        code: error?.code,
+        traceId: error?.traceId,
+        errors: error?.errors,
+      },
+      `Request failed with ${response.status}`,
+    );
   }
 
   if (response.status === 204) {
@@ -523,6 +596,8 @@ export const adminApi = {
       relativePath: string;
       contentType: string;
       sizeBytes: number;
+      width?: number | null;
+      height?: number | null;
     }>('/api/facility-maps/assets', { method: 'POST', body: formData }, token);
   },
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import QRCode from 'qrcode';
 import {
@@ -30,6 +30,9 @@ import AdminLogin from './AdminLogin';
 import {
   adminApi,
   type AdminUserListItem,
+  getApiErrorMessage,
+  getApiFieldErrors,
+  isApiClientError,
   type BuildingHierarchy,
   type CameraHierarchy,
   type CameraZoneHierarchy,
@@ -160,6 +163,11 @@ type MapEditorSelectionState = {
 type PolygonPoint = {
   x: number;
   y: number;
+};
+
+type CanvasSize = {
+  width: number;
+  height: number;
 };
 
 const sidebarItems: { key: SidebarKey; label: string; icon: typeof Activity }[] = [
@@ -456,6 +464,33 @@ function snapToGrid(value: number, max: number, gridSize = CAMERA_ZONE_GRID_SIZE
   return Math.max(0, Math.min(snapped, max));
 }
 
+function resolveContainedImageRect(
+  containerWidth: number,
+  containerHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+) {
+  if (!containerWidth || !containerHeight || !imageWidth || !imageHeight) {
+    return {
+      left: 0,
+      top: 0,
+      width: containerWidth,
+      height: containerHeight,
+    };
+  }
+
+  const scale = Math.min(containerWidth / imageWidth, containerHeight / imageHeight);
+  const width = imageWidth * scale;
+  const height = imageHeight * scale;
+
+  return {
+    left: (containerWidth - width) / 2,
+    top: (containerHeight - height) / 2,
+    width,
+    height,
+  };
+}
+
 export default function AdminDashboard() {
   const [session, setSession] = useState<Session | null>(null);
   const [activeView, setActiveView] = useState<SidebarKey>('organizations');
@@ -463,6 +498,7 @@ export default function AdminDashboard() {
   const [parkingTab, setParkingTab] = useState<ParkingTab>('facilities');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginFieldErrors, setLoginFieldErrors] = useState<Record<string, string[]> | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
@@ -556,6 +592,10 @@ export default function AdminDashboard() {
   const [selectedNodeQrDataUrl, setSelectedNodeQrDataUrl] = useState<string>('');
   const [nodeQrDataUrls, setNodeQrDataUrls] = useState<Record<string, string>>({});
   const [hiddenNodeIds, setHiddenNodeIds] = useState<Record<string, boolean>>({});
+  const [mapCanvasSize, setMapCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const [cameraZoneCanvasSize, setCameraZoneCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const mapCanvasRef = useRef<HTMLDivElement | null>(null);
+  const cameraZoneCanvasRef = useRef<HTMLDivElement | null>(null);
 
   const sites = useMemo(() => flattenSites(organizationHierarchy), [organizationHierarchy]);
   const buildings = useMemo(() => flattenBuildings(organizationHierarchy), [organizationHierarchy]);
@@ -629,10 +669,66 @@ export default function AdminDashboard() {
     [organizations.length, sites.length, mapVersions.length, cameras.length, users.length],
   );
   const activeViewLabel = sidebarItems.find((item) => item.key === activeView)?.label ?? activeView;
+  const mapCanvasImageRect = useMemo(
+    () =>
+      resolveContainedImageRect(
+        mapCanvasSize.width,
+        mapCanvasSize.height,
+        mapEditor?.width ?? 0,
+        mapEditor?.height ?? 0,
+      ),
+    [mapCanvasSize, mapEditor?.width, mapEditor?.height],
+  );
+  const cameraZoneCanvasImageRect = useMemo(
+    () =>
+      resolveContainedImageRect(
+        cameraZoneCanvasSize.width,
+        cameraZoneCanvasSize.height,
+        cameraZoneMapEditor?.width ?? 0,
+        cameraZoneMapEditor?.height ?? 0,
+      ),
+    [cameraZoneCanvasSize, cameraZoneMapEditor?.width, cameraZoneMapEditor?.height],
+  );
 
   useEffect(() => {
     setHiddenNodeIds({});
   }, [mapEditor?.id]);
+
+  useEffect(() => {
+    const element = mapCanvasRef.current;
+    if (!element) {
+      return;
+    }
+
+    const update = () =>
+      setMapCanvasSize({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [mapEditor?.id]);
+
+  useEffect(() => {
+    const element = cameraZoneCanvasRef.current;
+    if (!element) {
+      return;
+    }
+
+    const update = () =>
+      setCameraZoneCanvasSize({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [cameraZoneMapEditor?.id, cameraZoneForm.mapVersionId]);
 
   useEffect(() => {
     if (!organizationHierarchy) {
@@ -891,10 +987,13 @@ export default function AdminDashboard() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          const message = loadError instanceof Error ? loadError.message : 'Yonetim paneli yuklenemedi.';
+          const message = getApiErrorMessage(loadError, 'Yonetim paneli yuklenemedi.');
           setError(message);
 
-          if (/401|403|token|unauthorized/i.test(message)) {
+          if (
+            isApiClientError(loadError) &&
+            (loadError.status === 401 || loadError.status === 403 || loadError.code === 'invalid_token')
+          ) {
             handleLogout();
           }
         }
@@ -968,7 +1067,7 @@ export default function AdminDashboard() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Organizasyon hiyerarsisi yuklenemedi.');
+          setError(getApiErrorMessage(loadError, 'Organizasyon hiyerarsisi yuklenemedi.'));
         }
       }
     }
@@ -1009,7 +1108,7 @@ export default function AdminDashboard() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Harita surumu yuklenemedi.');
+          setError(getApiErrorMessage(loadError, 'Harita surumu yuklenemedi.'));
         }
       }
     }
@@ -1055,7 +1154,7 @@ export default function AdminDashboard() {
       await action();
       setSuccess(successMessage);
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Islem tamamlanamadi.');
+      setError(getApiErrorMessage(actionError, 'Islem tamamlanamadi.'));
     } finally {
       setBusy(false);
     }
@@ -1065,6 +1164,7 @@ export default function AdminDashboard() {
     try {
       setBusy(true);
       setError(null);
+      setLoginFieldErrors(null);
       const auth = await adminApi.login(emailOrUserName, password);
       const nextSession = {
         accessToken: auth.accessToken,
@@ -1076,7 +1176,8 @@ export default function AdminDashboard() {
       setSession(nextSession);
       setActiveView('organizations');
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Giris yapilamadi.');
+      setLoginFieldErrors(getApiFieldErrors(loginError));
+      setError(getApiErrorMessage(loginError, 'Giris yapilamadi.'));
     } finally {
       setBusy(false);
     }
@@ -1085,7 +1186,17 @@ export default function AdminDashboard() {
   function handleLogout() {
     setSession(null);
     setError(null);
+    setLoginFieldErrors(null);
     setSuccess(null);
+  }
+
+  function clearLoginFeedback() {
+    if (!error && !loginFieldErrors) {
+      return;
+    }
+
+    setError(null);
+    setLoginFieldErrors(null);
   }
 
   async function handleCreateOrganization() {
@@ -1541,6 +1652,8 @@ export default function AdminDashboard() {
       setMapVersionForm((current) => ({
         ...current,
         name: current.name || asset.originalFileName.replace(/\.[^.]+$/, ''),
+        width: asset.width ?? current.width,
+        height: asset.height ?? current.height,
       }));
     }, 'Harita dosyasi yuklendi.');
   }
@@ -1782,10 +1895,31 @@ export default function AdminDashboard() {
     }
 
     const bounds = event.currentTarget.getBoundingClientRect();
-    const relativeX = Math.max(0, Math.min(event.clientX - bounds.left, bounds.width));
-    const relativeY = Math.max(0, Math.min(event.clientY - bounds.top, bounds.height));
-    const pixelX = Math.round((relativeX / bounds.width) * mapEditor.width);
-    const pixelY = Math.round((relativeY / bounds.height) * mapEditor.height);
+    const imageRect = resolveContainedImageRect(
+      bounds.width,
+      bounds.height,
+      mapEditor.width,
+      mapEditor.height,
+    );
+    const relativeX = event.clientX - bounds.left;
+    const relativeY = event.clientY - bounds.top;
+
+    const insideImage =
+      relativeX >= imageRect.left &&
+      relativeX <= imageRect.left + imageRect.width &&
+      relativeY >= imageRect.top &&
+      relativeY <= imageRect.top + imageRect.height;
+
+    if (!insideImage) {
+      setMapEditorSelection({
+        editingNodeId: '',
+        editingConnectionId: '',
+      });
+      return;
+    }
+
+    const pixelX = Math.round(((relativeX - imageRect.left) / imageRect.width) * mapEditor.width);
+    const pixelY = Math.round(((relativeY - imageRect.top) / imageRect.height) * mapEditor.height);
 
     setNodeForm((current) => ({
       ...current,
@@ -1822,6 +1956,7 @@ export default function AdminDashboard() {
           <span>Dugume tikla duzenle, bos alana tikla yeni koordinat sec</span>
         </div>
         <div
+          ref={mapCanvasRef}
           className="relative cursor-crosshair bg-[#090b0d]"
           onClick={handleMapCanvasClick}
           style={{ aspectRatio: `${mapEditor.width} / ${mapEditor.height}` }}
@@ -1831,7 +1966,17 @@ export default function AdminDashboard() {
             className="h-full w-full object-contain"
             src={`/admin-api${mapEditor.assetPath}`}
           />
-          <svg className="pointer-events-none absolute inset-0 h-full w-full">
+          <svg
+            className="pointer-events-none absolute"
+            style={{
+              left: mapCanvasImageRect.left,
+              top: mapCanvasImageRect.top,
+              width: mapCanvasImageRect.width,
+              height: mapCanvasImageRect.height,
+            }}
+            viewBox={`0 0 ${mapEditor.width} ${mapEditor.height}`}
+            preserveAspectRatio="none"
+          >
             {mapEditor.connections.map((connection) => {
               const fromNode = nodeMap.get(connection.fromNodeId);
               const toNode = nodeMap.get(connection.toNodeId);
@@ -1843,10 +1988,10 @@ export default function AdminDashboard() {
               return (
                 <line
                   key={connection.id}
-                  x1={`${fromNode.normalizedX * 100}%`}
-                  y1={`${fromNode.normalizedY * 100}%`}
-                  x2={`${toNode.normalizedX * 100}%`}
-                  y2={`${toNode.normalizedY * 100}%`}
+                  x1={fromNode.pixelX}
+                  y1={fromNode.pixelY}
+                  x2={toNode.pixelX}
+                  y2={toNode.pixelY}
                   stroke={connection.isAccessible ? '#38bdf8' : '#94a3b8'}
                   strokeWidth="3"
                   strokeDasharray={connection.isBidirectional ? '0' : '8 6'}
@@ -1866,8 +2011,8 @@ export default function AdminDashboard() {
                   key={node.id}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 ${selected ? 'z-20' : 'z-10'}`}
                   style={{
-                    left: `${node.normalizedX * 100}%`,
-                    top: `${node.normalizedY * 100}%`,
+                    left: mapCanvasImageRect.left + (node.pixelX / mapEditor.width) * mapCanvasImageRect.width,
+                    top: mapCanvasImageRect.top + (node.pixelY / mapEditor.height) * mapCanvasImageRect.height,
                   }}
                 >
                   <div className="flex items-center gap-1">
@@ -1943,10 +2088,27 @@ export default function AdminDashboard() {
     }
 
     const bounds = event.currentTarget.getBoundingClientRect();
-    const relativeX = Math.max(0, Math.min(event.clientX - bounds.left, bounds.width));
-    const relativeY = Math.max(0, Math.min(event.clientY - bounds.top, bounds.height));
-    const rawX = Math.round((relativeX / bounds.width) * cameraZoneMapEditor.width);
-    const rawY = Math.round((relativeY / bounds.height) * cameraZoneMapEditor.height);
+    const imageRect = resolveContainedImageRect(
+      bounds.width,
+      bounds.height,
+      cameraZoneMapEditor.width,
+      cameraZoneMapEditor.height,
+    );
+    const relativeX = event.clientX - bounds.left;
+    const relativeY = event.clientY - bounds.top;
+
+    const insideImage =
+      relativeX >= imageRect.left &&
+      relativeX <= imageRect.left + imageRect.width &&
+      relativeY >= imageRect.top &&
+      relativeY <= imageRect.top + imageRect.height;
+
+    if (!insideImage) {
+      return;
+    }
+
+    const rawX = Math.round(((relativeX - imageRect.left) / imageRect.width) * cameraZoneMapEditor.width);
+    const rawY = Math.round(((relativeY - imageRect.top) / imageRect.height) * cameraZoneMapEditor.height);
     const x = snapToGrid(rawX, cameraZoneMapEditor.width);
     const y = snapToGrid(rawY, cameraZoneMapEditor.height);
 
@@ -1997,6 +2159,7 @@ export default function AdminDashboard() {
           <span>{CAMERA_ZONE_GRID_SIZE}px grid ile snap aktif</span>
         </div>
         <div
+          ref={cameraZoneCanvasRef}
           className="relative cursor-crosshair bg-[#090b0d]"
           onClick={handleCameraZoneCanvasClick}
           style={{ aspectRatio: `${cameraZoneMapEditor.width} / ${cameraZoneMapEditor.height}` }}
@@ -2006,14 +2169,24 @@ export default function AdminDashboard() {
             className="h-full w-full object-contain"
             src={`/admin-api${cameraZoneMapEditor.assetPath}`}
           />
-          <svg className="pointer-events-none absolute inset-0 h-full w-full">
+          <svg
+            className="pointer-events-none absolute"
+            style={{
+              left: cameraZoneCanvasImageRect.left,
+              top: cameraZoneCanvasImageRect.top,
+              width: cameraZoneCanvasImageRect.width,
+              height: cameraZoneCanvasImageRect.height,
+            }}
+            viewBox={`0 0 ${cameraZoneMapEditor.width} ${cameraZoneMapEditor.height}`}
+            preserveAspectRatio="none"
+          >
             {verticalGridLines.map((x) => (
               <line
                 key={`grid-x-${x}`}
-                x1={`${(x / cameraZoneMapEditor.width) * 100}%`}
-                y1="0%"
-                x2={`${(x / cameraZoneMapEditor.width) * 100}%`}
-                y2="100%"
+                x1={x}
+                y1={0}
+                x2={x}
+                y2={cameraZoneMapEditor.height}
                 stroke="rgba(148,163,184,0.18)"
                 strokeWidth="1"
               />
@@ -2021,10 +2194,10 @@ export default function AdminDashboard() {
             {horizontalGridLines.map((y) => (
               <line
                 key={`grid-y-${y}`}
-                x1="0%"
-                y1={`${(y / cameraZoneMapEditor.height) * 100}%`}
-                x2="100%"
-                y2={`${(y / cameraZoneMapEditor.height) * 100}%`}
+                x1={0}
+                y1={y}
+                x2={cameraZoneMapEditor.width}
+                y2={y}
                 stroke="rgba(148,163,184,0.18)"
                 strokeWidth="1"
               />
@@ -2056,8 +2229,12 @@ export default function AdminDashboard() {
                 syncCameraZonePoints(cameraZonePoints.filter((_, pointIndex) => pointIndex !== index));
               }}
               style={{
-                left: `${(point.x / cameraZoneMapEditor.width) * 100}%`,
-                top: `${(point.y / cameraZoneMapEditor.height) * 100}%`,
+                left:
+                  cameraZoneCanvasImageRect.left +
+                  (point.x / cameraZoneMapEditor.width) * cameraZoneCanvasImageRect.width,
+                top:
+                  cameraZoneCanvasImageRect.top +
+                  (point.y / cameraZoneMapEditor.height) * cameraZoneCanvasImageRect.height,
               }}
               type="button"
             >
@@ -4251,7 +4428,15 @@ export default function AdminDashboard() {
   }
 
   if (!session) {
-    return <AdminLogin onSubmit={handleLogin} error={error} busy={busy} />;
+    return (
+      <AdminLogin
+        onSubmit={handleLogin}
+        onInputChange={clearLoginFeedback}
+        error={error}
+        fieldErrors={loginFieldErrors}
+        busy={busy}
+      />
+    );
   }
 
   const topSearchPlaceholder =

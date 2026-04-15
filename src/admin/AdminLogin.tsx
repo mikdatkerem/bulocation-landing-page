@@ -3,13 +3,18 @@ import type { FormEvent } from 'react';
 
 type AdminLoginProps = {
   onSubmit: (emailOrUserName: string, password: string) => Promise<void>;
+  onInputChange?: () => void;
   error: string | null;
+  fieldErrors?: Record<string, string[]> | null;
   busy: boolean;
 };
 
-export default function AdminLogin({ onSubmit, error, busy }: AdminLoginProps) {
+export default function AdminLogin({ onSubmit, onInputChange, error, fieldErrors, busy }: AdminLoginProps) {
   const [emailOrUserName, setEmailOrUserName] = useState('');
   const [password, setPassword] = useState('');
+  const emailOrUserNameError =
+    fieldErrors?.EmailOrUserName?.[0] || fieldErrors?.emailOrUserName?.[0] || null;
+  const passwordError = fieldErrors?.Password?.[0] || fieldErrors?.password?.[0] || null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,20 +32,42 @@ export default function AdminLogin({ onSubmit, error, busy }: AdminLoginProps) {
             <label className="block">
               <span className="mb-2 block text-sm text-slate-400">E-posta veya kullanici adi</span>
               <input
-                className="w-full rounded-none border border-[#23314d] bg-[#0f1727] px-4 py-3 text-sm text-white outline-none transition focus:border-[#4f6ea8] focus:bg-[#111c30]"
+                aria-invalid={emailOrUserNameError ? true : undefined}
+                className={`w-full rounded-none border px-4 py-3 text-sm text-white outline-none transition focus:bg-[#111c30] ${
+                  emailOrUserNameError
+                    ? 'border-rose-500/70 bg-rose-950/20 focus:border-rose-400'
+                    : 'border-[#23314d] bg-[#0f1727] focus:border-[#4f6ea8]'
+                }`}
                 value={emailOrUserName}
-                onChange={(event) => setEmailOrUserName(event.target.value)}
+                onChange={(event) => {
+                  onInputChange?.();
+                  setEmailOrUserName(event.target.value);
+                }}
               />
+              {emailOrUserNameError ? (
+                <span className="mt-2 block text-xs text-rose-200">{emailOrUserNameError}</span>
+              ) : null}
             </label>
 
             <label className="block">
               <span className="mb-2 block text-sm text-slate-400">Sifre</span>
               <input
-                className="w-full rounded-none border border-[#23314d] bg-[#0f1727] px-4 py-3 text-sm text-white outline-none transition focus:border-[#4f6ea8] focus:bg-[#111c30]"
+                aria-invalid={passwordError ? true : undefined}
+                className={`w-full rounded-none border px-4 py-3 text-sm text-white outline-none transition focus:bg-[#111c30] ${
+                  passwordError
+                    ? 'border-rose-500/70 bg-rose-950/20 focus:border-rose-400'
+                    : 'border-[#23314d] bg-[#0f1727] focus:border-[#4f6ea8]'
+                }`}
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  onInputChange?.();
+                  setPassword(event.target.value);
+                }}
               />
+              {passwordError ? (
+                <span className="mt-2 block text-xs text-rose-200">{passwordError}</span>
+              ) : null}
             </label>
 
             {error ? (
