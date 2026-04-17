@@ -254,12 +254,20 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string): str
       return 'Bu e-posta adresi zaten kullaniliyor.';
     case 'conflict.username_in_use':
       return 'Bu kullanici adi zaten kullaniliyor.';
+    case 'auth.google_not_configured':
+      return 'Google ile giris henuz yapilandirilmamis.';
+    case 'auth.default_role_missing':
+      return 'Varsayilan kullanici rolu tanimli degil.';
+    case 'auth.session_not_owned':
+      return 'Bu oturum size ait degil.';
+    case 'auth.authenticated_user_required':
+      return 'Bu islem icin aktif oturum gerekli.';
     case 'validation_failed': {
       const firstError = Object.values(error.errors ?? {}).flat()[0];
       return firstError || 'Form alanlarini kontrol edin.';
     }
     case 'invalid_token':
-      return 'Oturum bilginiz gecerli degil. Lutfen tekrar giris yapin.';
+      return 'Baglanti veya dogrulama kodu gecerli degil ya da suresi doldu.';
     default:
       return error.detail || error.title || fallbackMessage;
   }
@@ -327,6 +335,30 @@ export const adminApi = {
     request<AuthResponse>('/api/auth/refresh-token', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
+    }),
+
+  forgotPassword: (email: string) =>
+    request<void>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    request<void>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
+
+  resendEmailVerification: (email: string) =>
+    request<void>('/api/auth/resend-email-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  verifyEmail: (token: string) =>
+    request<void>('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     }),
 
   getCurrentUser: (token: string) =>

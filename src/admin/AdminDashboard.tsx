@@ -71,6 +71,8 @@ type SearchOption = {
   hint?: string;
 };
 
+const ADMIN_SESSION_STORAGE_KEY = 'bulocation.admin.session';
+
 type SiteForm = {
   code: string;
   name: string;
@@ -596,6 +598,74 @@ export default function AdminDashboard() {
   const [cameraZoneCanvasSize, setCameraZoneCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const mapCanvasRef = useRef<HTMLDivElement | null>(null);
   const cameraZoneCanvasRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreStoredSession() {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const rawSession = window.localStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
+      if (!rawSession) {
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(rawSession) as Session;
+        const refreshExpiry = new Date(parsed.refreshTokenExpiresAt).getTime();
+        if (Number.isNaN(refreshExpiry) || refreshExpiry <= Date.now()) {
+          window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+          return;
+        }
+
+        const accessExpiry = new Date(parsed.accessTokenExpiresAt).getTime();
+        const shouldRefreshNow =
+          Number.isNaN(accessExpiry) || accessExpiry <= Date.now() + 60_000;
+
+        if (shouldRefreshNow) {
+          const refreshed = await adminApi.refreshToken(parsed.refreshToken);
+          if (cancelled) {
+            return;
+          }
+
+          setSession({
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
+            refreshTokenExpiresAt: refreshed.refreshTokenExpiresAt,
+          });
+          return;
+        }
+
+        if (!cancelled) {
+          setSession(parsed);
+        }
+      } catch {
+        window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+      }
+    }
+
+    void restoreStoredSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (!session) {
+      window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(session));
+  }, [session]);
 
   const sites = useMemo(() => flattenSites(organizationHierarchy), [organizationHierarchy]);
   const buildings = useMemo(() => flattenBuildings(organizationHierarchy), [organizationHierarchy]);
@@ -1164,6 +1234,7 @@ export default function AdminDashboard() {
     try {
       setBusy(true);
       setError(null);
+      setSuccess(null);
       setLoginFieldErrors(null);
       const auth = await adminApi.login(emailOrUserName, password);
       const nextSession = {
@@ -1183,6 +1254,36 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleForgotPassword(email: string) {
+    try {
+      setBusy(true);
+      setError(null);
+      setSuccess(null);
+      setLoginFieldErrors(null);
+      await adminApi.forgotPassword(email.trim());
+      setSuccess('E-posta sistemde kayitliysa sifre yenileme baglantisi gonderildi.');
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Sifirlama baglantisi gonderilemedi.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResetPassword(token: string, newPassword: string) {
+    try {
+      setBusy(true);
+      setError(null);
+      setSuccess(null);
+      setLoginFieldErrors(null);
+      await adminApi.resetPassword(token.trim(), newPassword);
+      setSuccess('Sifreniz guncellendi. Yeni sifrenizle giris yapabilirsiniz.');
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Sifre yenilenemedi.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function handleLogout() {
     setSession(null);
     setError(null);
@@ -1191,12 +1292,13 @@ export default function AdminDashboard() {
   }
 
   function clearLoginFeedback() {
-    if (!error && !loginFieldErrors) {
+    if (!error && !loginFieldErrors && !success) {
       return;
     }
 
     setError(null);
     setLoginFieldErrors(null);
+    setSuccess(null);
   }
 
   async function handleCreateOrganization() {
@@ -4431,8 +4533,11 @@ export default function AdminDashboard() {
     return (
       <AdminLogin
         onSubmit={handleLogin}
+        onForgotPassword={handleForgotPassword}
+        onResetPassword={handleResetPassword}
         onInputChange={clearLoginFeedback}
         error={error}
+        notice={success}
         fieldErrors={loginFieldErrors}
         busy={busy}
       />
