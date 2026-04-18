@@ -40,11 +40,7 @@ function AuthModeButton({
 }) {
   return (
     <button
-      className={`border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-        active
-          ? 'border-[#1836b9] bg-[#1836b9] text-[#a4b1ff]'
-          : 'border-transparent bg-[#292a2b] text-[#8f8fa0] hover:bg-[#343536] hover:text-[#e3e2e3]'
-      }`}
+      className={`admin-login-mode-button ${active ? 'is-active' : ''}`}
       type="button"
       onClick={onClick}
     >
@@ -108,20 +104,20 @@ export default function AdminLogin({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#060708] px-4 py-10 text-[#e3e2e3]">
-      <div className="w-full max-w-[460px]">
-        <section className="relative overflow-hidden rounded-[10px] bg-[#121315] p-7 text-[#e3e2e3] shadow-[0_32px_90px_rgba(0,0,0,0.55)]">
-          <div className="absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,#121315_0%,#101527_16%,#14236c_36%,#1836b9_66%,#182b93_84%,#111735_100%)] shadow-[0_0_14px_rgba(24,54,185,0.42)]" />
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a4b1ff]">
+    <div className="admin-login-shell">
+      <div className="admin-login-wrap">
+        <section className="admin-login-card">
+          <div className="admin-login-accent" />
+          <div className="admin-login-head">
+            <div className="admin-login-copy">
+              <p className="admin-login-kicker">
                 {MODE_COPY[mode].title}
               </p>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[#8f8fa0]">
+              <p className="admin-login-description">
                 {MODE_COPY[mode].description}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="admin-login-modes">
               <AuthModeButton active={mode === 'login'} onClick={() => changeMode('login')}>
                 Giris
               </AuthModeButton>
@@ -134,20 +130,16 @@ export default function AdminLogin({
             </div>
           </div>
 
-          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+          <form className="admin-login-form" onSubmit={handleSubmit}>
             {mode === 'login' ? (
               <>
-                <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#8f8fa0]">
+                <label className="admin-login-field">
+                  <span className="admin-login-label">
                     E-posta veya kullanici adi
                   </span>
                   <input
                     aria-invalid={emailOrUserNameError ? true : undefined}
-                    className={`w-full rounded-[7px] border px-4 py-3 text-sm text-white outline-none transition focus:bg-[#343536] ${
-                      emailOrUserNameError
-                        ? 'border-rose-500/70 bg-rose-950/20 focus:border-rose-400'
-                        : 'border-transparent bg-[#292a2b] focus:border-[#1836b9]'
-                    }`}
+                    className={`admin-login-input ${emailOrUserNameError ? 'has-error' : ''}`}
                     value={emailOrUserName}
                     onChange={(event) => {
                       onInputChange?.();
@@ -155,21 +147,17 @@ export default function AdminLogin({
                     }}
                   />
                   {emailOrUserNameError ? (
-                    <span className="mt-2 block text-xs text-rose-200">{emailOrUserNameError}</span>
+                    <span className="admin-login-error">{emailOrUserNameError}</span>
                   ) : null}
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#8f8fa0]">
+                <label className="admin-login-field">
+                  <span className="admin-login-label">
                     Sifre
                   </span>
                   <input
                     aria-invalid={passwordError ? true : undefined}
-                    className={`w-full rounded-[7px] border px-4 py-3 text-sm text-white outline-none transition focus:bg-[#343536] ${
-                      passwordError
-                        ? 'border-rose-500/70 bg-rose-950/20 focus:border-rose-400'
-                        : 'border-transparent bg-[#292a2b] focus:border-[#1836b9]'
-                    }`}
+                    className={`admin-login-input ${passwordError ? 'has-error' : ''}`}
                     type="password"
                     value={password}
                     onChange={(event) => {
@@ -178,19 +166,19 @@ export default function AdminLogin({
                     }}
                   />
                   {passwordError ? (
-                    <span className="mt-2 block text-xs text-rose-200">{passwordError}</span>
+                    <span className="admin-login-error">{passwordError}</span>
                   ) : null}
                 </label>
               </>
             ) : null}
 
             {mode === 'forgot' ? (
-              <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#8f8fa0]">
+              <label className="admin-login-field">
+                <span className="admin-login-label">
                   Kayitli e-posta adresi
                 </span>
                 <input
-                  className="w-full rounded-[7px] border border-transparent bg-[#292a2b] px-4 py-3 text-sm text-white outline-none transition focus:border-[#1836b9] focus:bg-[#343536]"
+                  className="admin-login-input"
                   type="email"
                   value={forgotEmail}
                   onChange={(event) => {
@@ -203,12 +191,12 @@ export default function AdminLogin({
 
             {mode === 'reset' ? (
               <>
-                <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#8f8fa0]">
+                <label className="admin-login-field">
+                  <span className="admin-login-label">
                     Sifirlama kodu
                   </span>
                   <textarea
-                    className="min-h-[108px] w-full rounded-[7px] border border-transparent bg-[#292a2b] px-4 py-3 text-sm text-white outline-none transition focus:border-[#1836b9] focus:bg-[#343536]"
+                    className="admin-login-input admin-login-textarea"
                     value={resetToken}
                     onChange={(event) => {
                       onInputChange?.();
@@ -216,12 +204,12 @@ export default function AdminLogin({
                     }}
                   />
                 </label>
-                <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#8f8fa0]">
+                <label className="admin-login-field">
+                  <span className="admin-login-label">
                     Yeni sifre
                   </span>
                   <input
-                    className="w-full rounded-[7px] border border-transparent bg-[#292a2b] px-4 py-3 text-sm text-white outline-none transition focus:border-[#1836b9] focus:bg-[#343536]"
+                    className="admin-login-input"
                     type="password"
                     value={newPassword}
                     onChange={(event) => {
@@ -230,17 +218,13 @@ export default function AdminLogin({
                     }}
                   />
                 </label>
-                <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#8f8fa0]">
+                <label className="admin-login-field">
+                  <span className="admin-login-label">
                     Yeni sifre tekrar
                   </span>
                   <input
                     aria-invalid={resetPasswordError ? true : undefined}
-                    className={`w-full rounded-[7px] border px-4 py-3 text-sm text-white outline-none transition focus:bg-[#343536] ${
-                      resetPasswordError
-                        ? 'border-rose-500/70 bg-rose-950/20 focus:border-rose-400'
-                        : 'border-transparent bg-[#292a2b] focus:border-[#1836b9]'
-                    }`}
+                    className={`admin-login-input ${resetPasswordError ? 'has-error' : ''}`}
                     type="password"
                     value={confirmPassword}
                     onChange={(event) => {
@@ -249,26 +233,26 @@ export default function AdminLogin({
                     }}
                   />
                   {resetPasswordError ? (
-                    <span className="mt-2 block text-xs text-rose-200">{resetPasswordError}</span>
+                    <span className="admin-login-error">{resetPasswordError}</span>
                   ) : null}
                 </label>
               </>
             ) : null}
 
             {error ? (
-              <div className="border border-rose-500/30 bg-rose-950/30 px-4 py-3 text-sm text-rose-100">
+              <div className="admin-login-alert is-error">
                 {error}
               </div>
             ) : null}
 
             {!error && notice ? (
-              <div className="border border-emerald-500/30 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100">
+              <div className="admin-login-alert is-success">
                 {notice}
               </div>
             ) : null}
 
             <button
-              className="w-full rounded-[7px] border border-transparent bg-[#1836b9] px-4 py-3 text-sm font-semibold text-[#a4b1ff] transition hover:bg-[#1735b8] disabled:cursor-not-allowed disabled:opacity-60"
+              className="admin-login-submit"
               disabled={
                 busy ||
                 (mode === 'login' && (!emailOrUserName.trim() || !password.trim())) ||

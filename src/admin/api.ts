@@ -58,6 +58,26 @@ export type AdminUserListItem = {
   roles: string[];
 };
 
+export type AdminUserSearchResult = {
+  id: string;
+  userName: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+};
+
+export type OrganizationAdmin = {
+  userId: string;
+  organizationId: string;
+  roleName: string;
+  userName: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  assignedAt: string;
+};
+
 export type PagedResult<T> = {
   items: T[];
   pageNumber: number;
@@ -759,6 +779,13 @@ export const adminApi = {
   getAdminUsers: (token: string) =>
     request<PagedResult<AdminUserListItem>>('/api/admin/users?pageNumber=1&pageSize=10', {}, token),
 
+  searchAdminUsers: (token: string, search: string, limit = 20) =>
+    request<AdminUserSearchResult[]>(
+      `/api/admin/users/search?search=${encodeURIComponent(search)}&limit=${limit}`,
+      {},
+      token,
+    ),
+
   getAdminUser: (token: string, userId: string) =>
     request<AdminUserListItem & { updatedAt?: string | null; deletedAt?: string | null }>(
       `/api/admin/users/${userId}`,
@@ -788,4 +815,17 @@ export const adminApi = {
 
   removeRole: (token: string, userId: string, roleId: string) =>
     request<void>(`/api/admin/users/${userId}/roles/${roleId}`, { method: 'DELETE' }, token),
+
+  getOrganizationAdmins: (token: string, organizationId: string) =>
+    request<OrganizationAdmin[]>(`/api/admin/organizations/${organizationId}/admins`, {}, token),
+
+  assignOrganizationAdmin: (token: string, organizationId: string, userId: string) =>
+    request<void>(
+      `/api/admin/organizations/${organizationId}/admins`,
+      { method: 'POST', body: JSON.stringify({ userId }) },
+      token,
+    ),
+
+  removeOrganizationAdmin: (token: string, organizationId: string, userId: string) =>
+    request<void>(`/api/admin/organizations/${organizationId}/admins/${userId}`, { method: 'DELETE' }, token),
 };

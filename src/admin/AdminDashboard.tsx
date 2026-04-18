@@ -17,7 +17,6 @@ import {
   ParkingCircle,
   Plus,
   RotateCcw,
-  Search,
   ShieldCheck,
   Trash2,
   Upload,
@@ -25,10 +24,10 @@ import {
   Waypoints,
   X,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import AdminLogin from './AdminLogin';
 import {
   adminApi,
+  type AdminUserSearchResult,
   type AdminUserListItem,
   getApiErrorMessage,
   getApiFieldErrors,
@@ -155,6 +154,9 @@ type ConnectionForm = {
 type UserActionState = {
   selectedUserId: string;
   selectedRoleId: string;
+  userSearchTerm: string;
+  organizationSearchTerm: string;
+  selectedOrganizationAdminOrganizationId: string;
 };
 
 type MapEditorSelectionState = {
@@ -431,8 +433,20 @@ function actionButtonClassName(tone: 'neutral' | 'danger' | 'accent' = 'neutral'
   return 'admin-action inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
 }
 
-function topNavTabs(activeViewLabel: string) {
-  return ['Dashboard', 'Analytics', activeViewLabel];
+function getViewLabel(view: SidebarKey) {
+  return sidebarItems.find((item) => item.key === view)?.label ?? view;
+}
+
+function topNavTabs(activeView: SidebarKey, activeViewLabel: string) {
+  const tabs = [
+    { key: 'overview' as SidebarKey, label: 'Panel', active: activeView === 'overview' },
+  ];
+
+  if (activeView !== 'overview') {
+    tabs.push({ key: activeView, label: activeViewLabel, active: true });
+  }
+
+  return tabs;
 }
 
 function parsePolygonJson(value: string | null | undefined) {
@@ -508,6 +522,7 @@ export default function AdminDashboard() {
   const [organizationHierarchy, setOrganizationHierarchy] = useState<OrganizationHierarchy | null>(null);
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [usersPage, setUsersPage] = useState<PagedResult<AdminUserListItem> | null>(null);
+  const [userSearchResults, setUserSearchResults] = useState<AdminUserSearchResult[]>([]);
   const [mapEditor, setMapEditor] = useState<MapVersionEditor | null>(null);
   const [cameraZoneMapEditor, setCameraZoneMapEditor] = useState<MapVersionEditor | null>(null);
   const [selectedMapVersionId, setSelectedMapVersionId] = useState<string>('');
@@ -583,6 +598,9 @@ export default function AdminDashboard() {
   const [userActionState, setUserActionState] = useState<UserActionState>({
     selectedUserId: '',
     selectedRoleId: '',
+    userSearchTerm: '',
+    organizationSearchTerm: '',
+    selectedOrganizationAdminOrganizationId: '',
   });
   const [mapEditorSelection, setMapEditorSelection] = useState<MapEditorSelectionState>({
     editingNodeId: '',
@@ -700,7 +718,44 @@ export default function AdminDashboard() {
       ),
     [mapVersions, selectedMapSiteId, selectedMapBuildingId, selectedMapFloorId],
   );
-  const users = usersPage?.items ?? [];
+  const users = useMemo(() => usersPage?.items ?? [], [usersPage]);
+  const isSuperAdmin = profile?.roles.some((role) => role.toLowerCase() === 'superadmin') ?? false;
+  const assignableRoles = useMemo(
+    () => roles.filter((role) => role.name.toLowerCase() !== 'admin'),
+    [roles],
+  );
+  const selectedRoleUser = useMemo(
+    () =>
+      userSearchResults.find((user) => user.id === userActionState.selectedUserId) ??
+      users.find((user) => user.id === userActionState.selectedUserId) ??
+      null,
+    [userActionState.selectedUserId, userSearchResults, users],
+  );
+  const organizationSearchResults = useMemo(() => {
+    const search = userActionState.organizationSearchTerm.trim().toLocaleLowerCase('tr-TR');
+    if (search.length < 2) {
+      return [] as OrganizationSummary[];
+    }
+
+    return organizations
+      .filter((organization) => {
+        const name = organization.name.toLocaleLowerCase('tr-TR');
+        const description = organization.description?.toLocaleLowerCase('tr-TR') ?? '';
+        return name.includes(search) || description.includes(search);
+      })
+      .slice(0, 12);
+  }, [organizations, userActionState.organizationSearchTerm]);
+  const selectedOrganizationAdminOrganization = useMemo(
+    () =>
+      organizations.find(
+        (organization) => organization.id === userActionState.selectedOrganizationAdminOrganizationId,
+      ) ?? null,
+    [organizations, userActionState.selectedOrganizationAdminOrganizationId],
+  );
+  const visibleSidebarItems = useMemo(
+    () => sidebarItems.filter((item) => isSuperAdmin || (item.key !== 'users' && item.key !== 'security')),
+    [isSuperAdmin],
+  );
   const isParkingSpotNode = nodeForm.nodeType === 8;
   const generatesQrForNodeForm = nodeTypeGeneratesQr(nodeForm.nodeType);
   const selectedMapNode = useMemo(
@@ -728,17 +783,7 @@ export default function AdminDashboard() {
     return mapVersions.filter((version) => version.floorId === selectedCamera.floorId);
   }, [mapVersions, selectedCamera]);
 
-  const metrics = useMemo(
-    () => [
-      { label: 'Organizasyon', value: organizations.length.toString().padStart(2, '0'), icon: Building2 },
-      { label: 'Yerleske', value: sites.length.toString().padStart(2, '0'), icon: Compass },
-      { label: 'Harita Surumu', value: mapVersions.length.toString().padStart(2, '0'), icon: Map },
-      { label: 'Kamera', value: cameras.length.toString().padStart(2, '0'), icon: Compass },
-      { label: 'Yonetici Kullanici', value: users.length.toString().padStart(2, '0'), icon: Users },
-    ],
-    [organizations.length, sites.length, mapVersions.length, cameras.length, users.length],
-  );
-  const activeViewLabel = sidebarItems.find((item) => item.key === activeView)?.label ?? activeView;
+  const activeViewLabel = getViewLabel(activeView);
   const mapCanvasImageRect = useMemo(
     () =>
       resolveContainedImageRect(
@@ -927,15 +972,50 @@ export default function AdminDashboard() {
   }, [cameraZoneForm.mapVersionId, session]);
 
   useEffect(() => {
-    if (users.length === 0 && roles.length === 0) {
+    if (assignableRoles.length === 0) {
       return;
     }
 
     setUserActionState((current) => ({
-      selectedUserId: current.selectedUserId || users[0]?.id || '',
-      selectedRoleId: current.selectedRoleId || roles[0]?.id || '',
+      ...current,
+      selectedRoleId: assignableRoles.some((role) => role.id === current.selectedRoleId)
+        ? current.selectedRoleId
+        : assignableRoles[0].id,
     }));
-  }, [users, roles]);
+  }, [assignableRoles]);
+
+  useEffect(() => {
+    if (!session || !isSuperAdmin) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    const search = userActionState.userSearchTerm.trim();
+    if (search.length < 2) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    const activeSession = session;
+    let cancelled = false;
+    const timeout = window.setTimeout(async () => {
+      try {
+        const results = await adminApi.searchAdminUsers(activeSession.accessToken, search, 20);
+        if (!cancelled) {
+          setUserSearchResults(results);
+        }
+      } catch (searchError) {
+        if (!cancelled) {
+          setError(getApiErrorMessage(searchError, 'Kullanici aramasi yapilamadi.'));
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [isSuperAdmin, session, userActionState.userSearchTerm]);
 
   useEffect(() => {
     const referenceValue = selectedMapNode?.externalReferenceId;
@@ -1016,6 +1096,7 @@ export default function AdminDashboard() {
       setOrganizationHierarchy(null);
       setRoles([]);
       setUsersPage(null);
+      setUserSearchResults([]);
       setMapEditor(null);
       return;
     }
@@ -1028,12 +1109,17 @@ export default function AdminDashboard() {
         setBusy(true);
         setError(null);
 
-        const [currentUser, organizationsResponse, rolesResponse, usersResponse] = await Promise.all([
+        const [currentUser, organizationsResponse] = await Promise.all([
           adminApi.getCurrentUser(activeSession.accessToken),
           adminApi.getOrganizations(activeSession.accessToken),
-          adminApi.getRoles(activeSession.accessToken),
-          adminApi.getAdminUsers(activeSession.accessToken),
         ]);
+        const currentUserIsSuperAdmin = currentUser.roles.some((role) => role.toLowerCase() === 'superadmin');
+        const [rolesResponse, usersResponse] = currentUserIsSuperAdmin
+          ? await Promise.all([
+              adminApi.getRoles(activeSession.accessToken),
+              adminApi.getAdminUsers(activeSession.accessToken),
+            ])
+          : [[], null] satisfies [RoleDto[], PagedResult<AdminUserListItem> | null];
 
         if (cancelled) {
           return;
@@ -1079,7 +1165,13 @@ export default function AdminDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [selectedOrganizationId, session]);
+
+  useEffect(() => {
+    if (!visibleSidebarItems.some((item) => item.key === activeView)) {
+      setActiveView('organizations');
+    }
+  }, [activeView, visibleSidebarItems]);
 
   useEffect(() => {
     if (!session) {
@@ -1191,8 +1283,24 @@ export default function AdminDashboard() {
   }, [selectedMapVersionId, session]);
 
   async function refreshUsers(activeSession: Session) {
+    if (!isSuperAdmin) {
+      setUsersPage(null);
+      return;
+    }
+
     const nextUsersPage = await adminApi.getAdminUsers(activeSession.accessToken);
     setUsersPage(nextUsersPage);
+  }
+
+  async function refreshUserSearchResults(activeSession: Session) {
+    const search = userActionState.userSearchTerm.trim();
+    if (!isSuperAdmin || search.length < 2) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    const results = await adminApi.searchAdminUsers(activeSession.accessToken, search, 20);
+    setUserSearchResults(results);
   }
 
   async function refreshHierarchy(activeSession: Session, organizationId = selectedOrganizationId) {
@@ -2398,6 +2506,7 @@ export default function AdminDashboard() {
         userActionState.selectedRoleId,
       );
       await refreshUsers(session);
+      await refreshUserSearchResults(session);
     }, 'Rol atandi.');
   }
 
@@ -2413,7 +2522,32 @@ export default function AdminDashboard() {
         userActionState.selectedRoleId,
       );
       await refreshUsers(session);
+      await refreshUserSearchResults(session);
     }, 'Rol kaldirildi.');
+  }
+
+  async function handleAssignOrganizationAdmin() {
+    if (
+      !session ||
+      !userActionState.selectedUserId ||
+      !userActionState.selectedOrganizationAdminOrganizationId
+    ) {
+      return;
+    }
+
+    const organizationName = selectedOrganizationAdminOrganization?.name ?? 'secilen sirket';
+
+    await runAction(async () => {
+      await adminApi.assignOrganizationAdmin(
+        session.accessToken,
+        userActionState.selectedOrganizationAdminOrganizationId,
+        userActionState.selectedUserId,
+      );
+      await Promise.all([
+        refreshUsers(session),
+        refreshUserSearchResults(session),
+      ]);
+    }, `${selectedRoleUser?.email ?? 'Kullanici'} ${organizationName} icin sirket admini yapildi.`);
   }
 
   function renderOrganizations() {
@@ -2449,39 +2583,43 @@ export default function AdminDashboard() {
                     <p className={`mt-2 text-xs leading-6 ${active ? 'text-slate-300' : 'text-slate-400'}`}>
                       {organization.description || 'Aciklama yok'}
                     </p>
-                    <div className="mt-3 flex gap-2">
-                      <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleUpdateOrganization(organization); }}>
-                        Duzenle
-                      </span>
-                      <span className={actionButtonClassName('danger')} onClick={(event) => { event.stopPropagation(); void handleDeleteOrganization(organization.id); }}>
-                        Sil
-                      </span>
-                    </div>
-                  </button>
-                );
-              })
+                        <div className="mt-3 flex gap-2">
+                          <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleUpdateOrganization(organization); }}>
+                            Duzenle
+                          </span>
+                          {isSuperAdmin ? (
+                            <span className={actionButtonClassName('danger')} onClick={(event) => { event.stopPropagation(); void handleDeleteOrganization(organization.id); }}>
+                              Sil
+                            </span>
+                          ) : null}
+                        </div>
+                      </button>
+                    );
+                  })
             )}
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className={sectionCardClassName()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organizasyon olustur</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">Yeni kurum ekle</h3>
-            <div className="mt-6 grid gap-4">
-              <FieldShell label="Ad">
-                <input className={inputClassName()} placeholder="Ornek: Acibadem Saglik Grubu" value={organizationForm.name} onChange={(event) => setOrganizationForm((current) => ({ ...current, name: event.target.value }))} />
-              </FieldShell>
-              <FieldShell label="Aciklama">
-                <textarea className={`${inputClassName()} min-h-28 resize-y`} placeholder="Bu organizasyonun kapsami ve yonetim notu" value={organizationForm.description} onChange={(event) => setOrganizationForm((current) => ({ ...current, description: event.target.value }))} />
-              </FieldShell>
-              <CodeGuide>Organizasyon seviyesinde kod yok. Kod yapisi yerleske, bina, kat ve otopark seviyesinde kullanilir.</CodeGuide>
-              <button className="inline-flex items-center justify-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" disabled={busy || !organizationForm.name.trim()} onClick={handleCreateOrganization} type="button">
-                <Plus className="h-4 w-4" />
-                Organizasyon olustur
-              </button>
+          {isSuperAdmin ? (
+            <div className={sectionCardClassName()}>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organizasyon olustur</p>
+              <h3 className="mt-2 text-2xl font-semibold text-white">Yeni kurum ekle</h3>
+              <div className="mt-6 grid gap-4">
+                <FieldShell label="Ad">
+                  <input className={inputClassName()} placeholder="Ornek: Acibadem Saglik Grubu" value={organizationForm.name} onChange={(event) => setOrganizationForm((current) => ({ ...current, name: event.target.value }))} />
+                </FieldShell>
+                <FieldShell label="Aciklama">
+                  <textarea className={`${inputClassName()} min-h-28 resize-y`} placeholder="Bu organizasyonun kapsami ve yonetim notu" value={organizationForm.description} onChange={(event) => setOrganizationForm((current) => ({ ...current, description: event.target.value }))} />
+                </FieldShell>
+                <CodeGuide>Organizasyon seviyesinde kod yok. Kod yapisi yerleske, bina, kat ve otopark seviyesinde kullanilir.</CodeGuide>
+                <button className="inline-flex items-center justify-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" disabled={busy || !organizationForm.name.trim()} onClick={handleCreateOrganization} type="button">
+                  <Plus className="h-4 w-4" />
+                  Organizasyon olustur
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className={sectionCardClassName()}>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Secili organizasyon</p>
@@ -2660,7 +2798,7 @@ export default function AdminDashboard() {
                     <p className="mt-1 text-xs text-slate-500">{user.email}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {user.roles.map((role) => (
+                    {user.roles.filter((role) => role.toLowerCase() !== 'admin').map((role) => (
                       <span
                         key={`${user.id}-${role}`}
                         className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
@@ -4402,7 +4540,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {user.roles.map((role) => (
+                  {user.roles.filter((role) => role.toLowerCase() !== 'admin').map((role) => (
                     <span
                       key={`${user.id}-${role}`}
                       className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
@@ -4417,25 +4555,182 @@ export default function AdminDashboard() {
         </div>
 
         <div className={sectionCardClassName()}>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Rol atama</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-950">Erisim ver veya kaldir</h3>
+          <p className="admin-kicker">Yetki atama</p>
+          <h3 className="admin-heading mt-2 text-2xl font-semibold">Kullanici ara ve sirket yetkisi ver</h3>
+          <p className="mt-2 text-sm leading-6 text-[#8f96a3]">
+            Bu ekran yalnizca SuperAdmin tarafindan kullanilir. Once kullaniciyi, sonra sirketi sec; atama sonrasi kullanici sadece o sirketin panel verilerini gorur.
+          </p>
+
           <div className="mt-6 grid gap-4">
-            <FieldShell label="Kullanici">
-              <select
-                className={selectClassName()}
-                value={userActionState.selectedUserId}
+            <FieldShell label="Kullanici ara">
+              <input
+                className={inputClassName()}
+                placeholder="E-posta, kullanici adi, ad veya soyad"
+                value={userActionState.userSearchTerm}
                 onChange={(event) =>
-                  setUserActionState((current) => ({ ...current, selectedUserId: event.target.value }))
+                  setUserActionState((current) => ({
+                    ...current,
+                    userSearchTerm: event.target.value,
+                    selectedUserId: '',
+                  }))
                 }
-              >
-                <option value="">Kullanici sec</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName} - {user.email}
-                  </option>
-                ))}
-              </select>
+              />
             </FieldShell>
+
+            <div className="grid gap-2">
+              {userActionState.userSearchTerm.trim().length < 2 ? (
+                <div className="admin-panel-subtle border-dashed p-4 text-sm text-[#8f96a3]">
+                  Arama icin en az 2 karakter yaz.
+                </div>
+              ) : userSearchResults.length === 0 ? (
+                <div className="admin-panel-subtle border-dashed p-4 text-sm text-[#8f96a3]">
+                  Eslesen kullanici bulunamadi.
+                </div>
+              ) : (
+                userSearchResults.map((user) => {
+                  const selected = user.id === userActionState.selectedUserId;
+                  const visibleRoles = user.roles.filter((role) => role.toLowerCase() !== 'admin');
+                  return (
+                    <button
+                      key={user.id}
+                      className={`admin-action flex items-center justify-between gap-4 px-4 py-3 text-left transition ${
+                        selected ? 'admin-action-accent' : ''
+                      }`}
+                      onClick={() =>
+                        setUserActionState((current) => ({
+                          ...current,
+                          selectedUserId: user.id,
+                        }))
+                      }
+                      type="button"
+                    >
+                      <span>
+                        <span className="block text-sm font-semibold">
+                          {user.firstName} {user.lastName}
+                        </span>
+                        <span className="mt-1 block text-xs text-[#8f96a3]">{user.email}</span>
+                        <span className="mt-2 flex flex-wrap gap-1.5">
+                          {visibleRoles.length === 0 ? (
+                            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-[#8f96a3]">
+                              Rol yok
+                            </span>
+                          ) : (
+                            visibleRoles.map((role) => (
+                              <span
+                                key={`${user.id}-${role}`}
+                                className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-[#d7d2ca]"
+                              >
+                                {role}
+                              </span>
+                            ))
+                          )}
+                        </span>
+                      </span>
+                      <span className="text-xs uppercase tracking-[0.16em] text-[#8f96a3]">
+                        {selected ? 'Secildi' : 'Sec'}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {selectedRoleUser ? (
+              <div className="admin-panel-subtle p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">Secili kullanici</p>
+                <p className="mt-2 text-sm font-semibold text-[#f5f3ef]">
+                  {selectedRoleUser.firstName} {selectedRoleUser.lastName}
+                </p>
+                <p className="mt-1 text-xs text-[#8f96a3]">{selectedRoleUser.email}</p>
+              </div>
+            ) : null}
+
+            <div className="admin-panel-subtle border-dashed p-4">
+              <p className="admin-kicker">Sirket admini atama</p>
+              <div className="mt-4 grid gap-4">
+                <FieldShell label="Sirket ara">
+                  <input
+                    className={inputClassName()}
+                    placeholder="Organizasyon veya aciklama ara"
+                    value={userActionState.organizationSearchTerm}
+                    onChange={(event) =>
+                      setUserActionState((current) => ({
+                        ...current,
+                        organizationSearchTerm: event.target.value,
+                        selectedOrganizationAdminOrganizationId: '',
+                      }))
+                    }
+                  />
+                </FieldShell>
+
+                <div className="grid gap-2">
+                  {userActionState.organizationSearchTerm.trim().length < 2 ? (
+                    <div className="admin-panel-subtle border-dashed p-4 text-sm text-[#8f96a3]">
+                      Sirket aramak icin en az 2 karakter yaz.
+                    </div>
+                  ) : organizationSearchResults.length === 0 ? (
+                    <div className="admin-panel-subtle border-dashed p-4 text-sm text-[#8f96a3]">
+                      Eslesen sirket bulunamadi.
+                    </div>
+                  ) : (
+                    organizationSearchResults.map((organization) => {
+                      const selected = organization.id === userActionState.selectedOrganizationAdminOrganizationId;
+                      return (
+                        <button
+                          key={organization.id}
+                          className={`admin-action flex items-center justify-between gap-4 px-4 py-3 text-left transition ${
+                            selected ? 'admin-action-accent' : ''
+                          }`}
+                          onClick={() =>
+                            setUserActionState((current) => ({
+                              ...current,
+                              selectedOrganizationAdminOrganizationId: organization.id,
+                            }))
+                          }
+                          type="button"
+                        >
+                          <span>
+                            <span className="block text-sm font-semibold">{organization.name}</span>
+                            <span className="mt-1 block text-xs text-[#8f96a3]">
+                              {organization.description || 'Aciklama yok'}
+                            </span>
+                          </span>
+                          <span className="text-xs uppercase tracking-[0.16em] text-[#8f96a3]">
+                            {selected ? 'Secildi' : 'Sec'}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                {selectedOrganizationAdminOrganization ? (
+                  <div className="admin-panel-subtle p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">Secili sirket</p>
+                    <p className="mt-2 text-sm font-semibold text-[#f5f3ef]">
+                      {selectedOrganizationAdminOrganization.name}
+                    </p>
+                    <p className="mt-1 text-xs text-[#8f96a3]">
+                      {selectedOrganizationAdminOrganization.description || 'Aciklama yok'}
+                    </p>
+                  </div>
+                ) : null}
+
+                <button
+                  className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                  disabled={
+                    busy ||
+                    !userActionState.selectedUserId ||
+                    !userActionState.selectedOrganizationAdminOrganizationId
+                  }
+                  onClick={handleAssignOrganizationAdmin}
+                  type="button"
+                >
+                  Secili kullaniciyi bu sirketin admini yap
+                </button>
+              </div>
+            </div>
+
             <FieldShell label="Rol">
               <select
                 className={selectClassName()}
@@ -4445,16 +4740,17 @@ export default function AdminDashboard() {
                 }
               >
                 <option value="">Rol sec</option>
-                {roles.map((role) => (
+                {assignableRoles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {role.name}
                   </option>
                 ))}
               </select>
             </FieldShell>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <button
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
                 disabled={busy || !userActionState.selectedUserId || !userActionState.selectedRoleId}
                 onClick={handleAssignRole}
                 type="button"
@@ -4462,7 +4758,7 @@ export default function AdminDashboard() {
                 Rol ata
               </button>
               <button
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                className="admin-action inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
                 disabled={busy || !userActionState.selectedUserId || !userActionState.selectedRoleId}
                 onClick={handleRemoveRole}
                 type="button"
@@ -4544,19 +4840,10 @@ export default function AdminDashboard() {
     );
   }
 
-  const topSearchPlaceholder =
-    activeView === 'cameras'
-      ? 'Kamera veya bolge ara...'
-      : activeView === 'maps'
-        ? 'POI veya koordinat ara...'
-        : activeView === 'users'
-          ? 'Kullanici ara...'
-          : 'Search...';
-
   return (
     <div className="admin-shell min-h-screen text-slate-100">
       <div className="flex min-h-screen">
-        <aside className="hidden w-[284px] shrink-0 border-r border-[rgba(245,243,239,0.08)] bg-[#090b0d] px-6 py-8 xl:block">
+        <aside className="fixed inset-y-0 left-0 hidden w-[284px] border-r border-[rgba(245,243,239,0.08)] bg-[#090b0d] px-6 py-8 xl:flex xl:flex-col">
           <div className="mb-10 space-y-4">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-[#0d1013] text-[#F5F3EF]">
@@ -4574,7 +4861,7 @@ export default function AdminDashboard() {
           </div>
 
           <nav className="space-y-2">
-            {sidebarItems.map(({ key, label, icon: Icon }) => {
+            {visibleSidebarItems.map(({ key, label, icon: Icon }) => {
               const active = key === activeView;
               return (
                 <button
@@ -4616,31 +4903,25 @@ export default function AdminDashboard() {
           </div>
         </aside>
 
-        <main className="flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+        <main className="flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-6 xl:ml-[284px]">
           <div className="mx-auto max-w-[1480px] space-y-6">
             <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(245,243,239,0.08)] pb-5">
               <div className="flex flex-wrap items-center gap-6">
-                <div className="relative min-w-[320px] max-w-[360px] flex-1">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8f96a3]" />
-                  <input
-                    className="admin-input h-12 px-12 text-sm"
-                    placeholder={topSearchPlaceholder}
-                  />
-                </div>
                 <nav className="flex items-center gap-8">
-                  {topNavTabs(activeViewLabel).map((tab, index) => {
-                    const active = index === 2;
+                  {topNavTabs(activeView, activeViewLabel).map((tab) => {
                     return (
-                      <span
-                        key={tab}
+                      <button
+                        key={`${tab.key}-${tab.label}`}
                         className={`border-b-2 pb-1 text-sm font-semibold ${
-                          active
+                          tab.active
                             ? 'border-[#1836B9] text-[#F5F3EF]'
                             : 'border-transparent text-[#8f96a3]'
                         }`}
+                        onClick={() => setActiveView(tab.key)}
+                        type="button"
                       >
-                        {tab}
-                      </span>
+                        {tab.label}
+                      </button>
                     );
                   })}
                 </nav>
@@ -4666,58 +4947,18 @@ export default function AdminDashboard() {
               </div>
             ) : null}
 
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="border border-[#1f2c45] bg-[#101927] p-5 shadow-[0_24px_60px_rgba(2,6,23,0.3)] lg:p-6"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8ea3c8]">
-                    {activeViewLabel}
-                  </div>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[#eef3ff] sm:text-4xl">
-                    {activeViewLabel} Yonetimi
-                  </h2>
-                  <p className="mt-3 max-w-3xl text-sm leading-7 text-[#b4c4e2]">
-                    Kurumsal yapinizi, navigasyon varliklarinizi ve operasyonel birimlerinizi bu panel uzerinden merkezi olarak yonetebilirsiniz.
-                  </p>
-                </div>
-                {activeView === 'organizations' ? (
-                  <button
-                    className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f]"
-                    onClick={handleCreateOrganization}
-                    type="button"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Yeni Organizasyon Ekle
-                  </button>
-                ) : null}
-                {activeView === 'maps' && selectedMapVersionId ? (
-                  <button
-                    className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f]"
-                    onClick={handlePublishMapVersion}
-                    type="button"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Yayinla
-                  </button>
-                ) : null}
+            {activeView === 'maps' && selectedMapVersionId ? (
+              <div className="flex justify-end">
+                <button
+                  className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f]"
+                  onClick={handlePublishMapVersion}
+                  type="button"
+                >
+                  <Upload className="h-4 w-4" />
+                  Yayınla
+                </button>
               </div>
-
-              <div className="mt-6 grid gap-3 md:grid-cols-5">
-                {metrics.map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="border border-[#1f2c45] bg-[#0d1422] p-4">
-                    <div className="flex h-10 w-10 items-center justify-center border border-[#2d3d5a] bg-[#15233a] text-white">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-500">{label}</p>
-                    <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.section>
+            ) : null}
 
             {activeView === 'overview' ? renderOverview() : null}
             {activeView === 'organizations' ? renderOrganizations() : null}
@@ -4725,8 +4966,8 @@ export default function AdminDashboard() {
             {activeView === 'parking' ? renderParking() : null}
             {activeView === 'maps' ? renderMaps() : null}
             {activeView === 'cameras' ? renderCameras() : null}
-            {activeView === 'users' ? renderUsers() : null}
-            {activeView === 'security' ? renderSecurity() : null}
+            {isSuperAdmin && activeView === 'users' ? renderUsers() : null}
+            {isSuperAdmin && activeView === 'security' ? renderSecurity() : null}
           </div>
         </main>
       </div>

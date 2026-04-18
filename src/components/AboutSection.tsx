@@ -13,7 +13,7 @@ export default function AboutSection() {
   return (
     <section className="bg-[#060708] px-6 py-32 lg:px-10" id="about">
       <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
-        <div className="sticky top-28">
+        <div className="lg:sticky lg:top-28">
           <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#bac3ff]">{t('about.eyebrow')}</p>
           <h2 className="mt-5 max-w-xl font-display text-5xl font-extrabold leading-[0.92] tracking-[-0.06em] text-[#f5f3ef] md:text-6xl">
             {t('about.title')}

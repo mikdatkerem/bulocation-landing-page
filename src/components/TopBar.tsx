@@ -15,12 +15,12 @@ export default function TopBar({ active = 'home' }: TopBarProps) {
     ].join(' ');
 
   return (
-    <header className="fixed left-0 top-0 z-40 w-full bg-[#060708]/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
-        <a className="relative block h-20 w-56 overflow-visible md:w-64" href="/">
+    <header className="fixed left-0 top-0 z-40 w-full overflow-hidden bg-[#060708]/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-10">
+        <a className="relative block h-20 w-64 overflow-visible md:w-72" href="/">
           <img
             alt="BuLocation"
-            className="absolute left-0 top-1/2 h-24 w-auto max-w-none -translate-y-1/2 object-contain md:h-45"
+            className="absolute left-0 top-1/2 h-48 w-auto max-w-none -translate-y-1/2 object-contain md:h-52"
             src="/logo_removed_bg.png"
           />
         </a>
