@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   HelpCircle,
+  MousePointer2,
   LogOut,
   Map,
   ParkingCircle,
@@ -38,6 +39,7 @@ import {
   type FacilityMapConnection,
   type FacilityMapNode,
   type MapAsset,
+  type MapPublishReadiness,
   type MapVersionEditor,
   type OrganizationHierarchy,
   type OrganizationSummary,
@@ -163,6 +165,8 @@ type MapEditorSelectionState = {
   editingNodeId: string;
   editingConnectionId: string;
 };
+
+type MapEditorTool = 'select' | 'node' | 'connection';
 
 type PolygonPoint = {
   x: number;
@@ -524,6 +528,7 @@ export default function AdminDashboard() {
   const [usersPage, setUsersPage] = useState<PagedResult<AdminUserListItem> | null>(null);
   const [userSearchResults, setUserSearchResults] = useState<AdminUserSearchResult[]>([]);
   const [mapEditor, setMapEditor] = useState<MapVersionEditor | null>(null);
+  const [mapPublishReadiness, setMapPublishReadiness] = useState<MapPublishReadiness | null>(null);
   const [cameraZoneMapEditor, setCameraZoneMapEditor] = useState<MapVersionEditor | null>(null);
   const [selectedMapVersionId, setSelectedMapVersionId] = useState<string>('');
   const [selectedMapSiteId, setSelectedMapSiteId] = useState<string>('');
@@ -606,6 +611,8 @@ export default function AdminDashboard() {
     editingNodeId: '',
     editingConnectionId: '',
   });
+  const [mapEditorTool, setMapEditorTool] = useState<MapEditorTool>('select');
+  const [connectionStartNodeId, setConnectionStartNodeId] = useState<string>('');
   const [editingCameraId, setEditingCameraId] = useState<string>('');
   const [editingCameraZoneId, setEditingCameraZoneId] = useState<string>('');
   const [cameraZonePoints, setCameraZonePoints] = useState<PolygonPoint[]>([]);
@@ -758,9 +765,14 @@ export default function AdminDashboard() {
   );
   const isParkingSpotNode = nodeForm.nodeType === 8;
   const generatesQrForNodeForm = nodeTypeGeneratesQr(nodeForm.nodeType);
+  const selectedMapCanEdit = Number(mapEditor?.status ?? 0) === 1;
   const selectedMapNode = useMemo(
     () => mapEditor?.nodes.find((node) => node.id === mapEditorSelection.editingNodeId) ?? null,
     [mapEditor, mapEditorSelection.editingNodeId],
+  );
+  const connectionStartNode = useMemo(
+    () => mapEditor?.nodes.find((node) => node.id === connectionStartNodeId) ?? null,
+    [connectionStartNodeId, mapEditor],
   );
   const selectedCamera = useMemo(
     () => cameras.find((camera) => camera.id === cameraZoneForm.cameraId) ?? null,
@@ -807,6 +819,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setHiddenNodeIds({});
+    setConnectionStartNodeId('');
+    setMapEditorTool('select');
   }, [mapEditor?.id]);
 
   useEffect(() => {
@@ -1251,6 +1265,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!session || !selectedMapVersionId) {
       setMapEditor(null);
+      setMapPublishReadiness(null);
       return;
     }
 
@@ -1259,9 +1274,13 @@ export default function AdminDashboard() {
 
     async function loadMapVersion() {
       try {
-        const editor = await adminApi.getMapVersion(activeSession.accessToken, selectedMapVersionId);
+        const [editor, readiness] = await Promise.all([
+          adminApi.getMapVersion(activeSession.accessToken, selectedMapVersionId),
+          adminApi.getMapPublishReadiness(activeSession.accessToken, selectedMapVersionId),
+        ]);
         if (!cancelled) {
           setMapEditor(editor);
+          setMapPublishReadiness(readiness);
           setConnectionForm((current) => ({
             ...current,
             fromNodeId: current.fromNodeId || editor.nodes[0]?.id || '',
@@ -1316,15 +1335,20 @@ export default function AdminDashboard() {
   async function refreshMapVersion(activeSession: Session, mapVersionId = selectedMapVersionId) {
     if (!mapVersionId) {
       setMapEditor(null);
+      setMapPublishReadiness(null);
       return null;
     }
 
-    const editor = await adminApi.getMapVersion(activeSession.accessToken, mapVersionId);
+    const [editor, readiness] = await Promise.all([
+      adminApi.getMapVersion(activeSession.accessToken, mapVersionId),
+      adminApi.getMapPublishReadiness(activeSession.accessToken, mapVersionId),
+    ]);
     setMapEditor(editor);
+    setMapPublishReadiness(readiness);
     return editor;
   }
 
-  async function runAction(action: () => Promise<void>, successMessage: string) {
+  async function runAction(action: () => Promise<void>, successMessage: string, errorMessage = 'Islem tamamlanamadi.') {
     try {
       setBusy(true);
       setError(null);
@@ -1332,7 +1356,7 @@ export default function AdminDashboard() {
       await action();
       setSuccess(successMessage);
     } catch (actionError) {
-      setError(getApiErrorMessage(actionError, 'Islem tamamlanamadi.'));
+      setError(getApiErrorMessage(actionError, errorMessage));
     } finally {
       setBusy(false);
     }
@@ -1865,7 +1889,7 @@ export default function AdminDashboard() {
         width: asset.width ?? current.width,
         height: asset.height ?? current.height,
       }));
-    }, 'Harita dosyasi yuklendi.');
+    }, 'Harita dosyasi yuklendi.', 'Harita dosyasi yuklenemedi. Dosya turunu, boyutunu ve sunucu depolama ayarlarini kontrol edin.');
   }
 
   async function handleCreateMapVersion() {
@@ -2028,6 +2052,7 @@ export default function AdminDashboard() {
         isBidirectional: connectionForm.isBidirectional,
         isAccessible: connectionForm.isAccessible,
       });
+      setConnectionStartNodeId('');
       await refreshMapVersion(session);
     }, 'Baglanti eklendi.');
   }
@@ -2076,6 +2101,8 @@ export default function AdminDashboard() {
       editingNodeId: node.id,
       editingConnectionId: '',
     });
+    setMapEditorTool('select');
+    setConnectionStartNodeId('');
     setNodeForm({
       label: node.label,
       nodeType: node.nodeType === 2 ? 1 : node.nodeType,
@@ -2090,6 +2117,8 @@ export default function AdminDashboard() {
       editingNodeId: '',
       editingConnectionId: connection.id,
     });
+    setMapEditorTool('connection');
+    setConnectionStartNodeId(connection.fromNodeId);
     setConnectionForm({
       fromNodeId: connection.fromNodeId,
       toNodeId: connection.toNodeId,
@@ -2125,6 +2154,20 @@ export default function AdminDashboard() {
         editingNodeId: '',
         editingConnectionId: '',
       });
+      if (mapEditorTool === 'connection') {
+        setConnectionStartNodeId('');
+      }
+      return;
+    }
+
+    if (mapEditorTool !== 'node') {
+      setMapEditorSelection({
+        editingNodeId: '',
+        editingConnectionId: '',
+      });
+      if (mapEditorTool === 'connection') {
+        setConnectionStartNodeId('');
+      }
       return;
     }
 
@@ -2141,6 +2184,63 @@ export default function AdminDashboard() {
       editingNodeId: '',
       editingConnectionId: '',
     });
+  }
+
+  async function handleMapNodeClick(node: FacilityMapNode) {
+    if (mapEditorTool !== 'connection' || !selectedMapCanEdit) {
+      startNodeEdit(node);
+      return;
+    }
+
+    setMapEditorSelection({
+      editingNodeId: '',
+      editingConnectionId: '',
+    });
+
+    if (!connectionStartNodeId) {
+      setConnectionStartNodeId(node.id);
+      setConnectionForm((current) => ({
+        ...current,
+        fromNodeId: node.id,
+        toNodeId: '',
+      }));
+      return;
+    }
+
+    if (connectionStartNodeId === node.id) {
+      setConnectionStartNodeId('');
+      setConnectionForm((current) => ({
+        ...current,
+        fromNodeId: '',
+        toNodeId: '',
+      }));
+      return;
+    }
+
+    setConnectionForm((current) => ({
+      ...current,
+      fromNodeId: connectionStartNodeId,
+      toNodeId: node.id,
+    }));
+
+    if (!session || !selectedMapVersionId || busy) {
+      return;
+    }
+
+    const fromNodeId = connectionStartNodeId;
+    const toNodeId = node.id;
+
+    await runAction(async () => {
+      await adminApi.addMapConnection(session.accessToken, selectedMapVersionId, {
+        fromNodeId,
+        toNodeId,
+        distanceMeters: Number(connectionForm.distanceMeters),
+        isBidirectional: connectionForm.isBidirectional,
+        isAccessible: connectionForm.isAccessible,
+      });
+      setConnectionStartNodeId('');
+      await refreshMapVersion(session);
+    }, 'Baglanti eklendi.');
   }
 
   function renderMapCanvas() {
@@ -2161,13 +2261,57 @@ export default function AdminDashboard() {
 
     return (
       <div className="admin-map-shell">
-        <div className="admin-map-toolbar flex items-center justify-between px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#8f96a3]">
-          <span>Gorsel editor</span>
-          <span>Dugume tikla duzenle, bos alana tikla yeni koordinat sec</span>
+        <div className="admin-map-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              { key: 'select' as const, label: 'Sec', icon: MousePointer2 },
+              { key: 'node' as const, label: 'Nokta', icon: Plus },
+              { key: 'connection' as const, label: 'Baglanti', icon: Waypoints },
+            ]).map((tool) => {
+              const Icon = tool.icon;
+              const active = mapEditorTool === tool.key;
+              const disabled = tool.key !== 'select' && !selectedMapCanEdit;
+              return (
+                <button
+                  key={tool.key}
+                  className={`admin-map-tool inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold ${
+                    active ? 'admin-map-tool-active' : ''
+                  }`}
+                  disabled={disabled}
+                  onClick={() => {
+                    setMapEditorTool(tool.key);
+                    setMapEditorSelection({ editingNodeId: '', editingConnectionId: '' });
+                    if (tool.key !== 'connection') {
+                      setConnectionStartNodeId('');
+                    }
+                  }}
+                  type="button"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {tool.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-xs uppercase tracking-[0.2em] text-[#8f96a3]">
+            {mapEditorTool === 'connection'
+              ? connectionStartNode
+                ? `${connectionStartNode.code} secildi, hedef dugume tikla`
+                : 'Baslangic dugumune tikla'
+              : mapEditorTool === 'node'
+                ? 'Bos alana tikla, koordinat sec'
+                : 'Dugume tikla, duzenle'}
+          </div>
         </div>
         <div
           ref={mapCanvasRef}
-          className="relative cursor-crosshair bg-[#090b0d]"
+          className={`relative bg-[#090b0d] ${
+            mapEditorTool === 'node'
+              ? 'cursor-crosshair'
+              : mapEditorTool === 'connection'
+                ? 'cursor-copy'
+                : 'cursor-default'
+          }`}
           onClick={handleMapCanvasClick}
           style={{ aspectRatio: `${mapEditor.width} / ${mapEditor.height}` }}
         >
@@ -2212,6 +2356,7 @@ export default function AdminDashboard() {
           </svg>
             {mapEditor.nodes.map((node) => {
               const selected = mapEditorSelection.editingNodeId === node.id;
+              const connectionStart = connectionStartNodeId === node.id;
               const qrPreview = nodeQrDataUrls[node.id];
               const showQrPreview = nodeTypeGeneratesQr(node.nodeType) && !!qrPreview;
               const hidden = !!hiddenNodeIds[node.id];
@@ -2229,13 +2374,13 @@ export default function AdminDashboard() {
                     {!hidden ? (
                       <button
                         className={`border px-2 py-1 text-[10px] font-semibold shadow-lg transition ${
-                          selected
+                          selected || connectionStart
                             ? 'border-[#1836B9] bg-[#1836B9] text-[#F5F3EF]'
                             : 'border-[rgba(245,243,239,0.12)] bg-[#0f1216] text-[#F5F3EF]'
                         } ${showQrPreview ? 'rounded-[8px]' : 'rounded-full'}`}
                         onClick={(event) => {
                           event.stopPropagation();
-                          startNodeEdit(node);
+                          void handleMapNodeClick(node);
                         }}
                         type="button"
                       >
@@ -2461,11 +2606,95 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (mapPublishReadiness && !mapPublishReadiness.canPublish) {
+      setError('Harita yayina hazir degil. Once hazirlik kontrolundeki hatalari tamamlayin.');
+      setSuccess(null);
+      return;
+    }
+
     await runAction(async () => {
       await adminApi.publishMapVersion(session.accessToken, selectedMapVersionId);
       await refreshHierarchy(session);
       await refreshMapVersion(session);
     }, 'Harita surumu yayina alindi.');
+  }
+
+  function renderMapPublishReadiness() {
+    if (!mapEditor) {
+      return null;
+    }
+
+    if (!mapPublishReadiness) {
+      return (
+        <div className="admin-panel-subtle mt-6 border-dashed p-5 text-sm text-[#8f96a3]">
+          Yayin hazirlik kontrolu yukleniyor.
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-6 admin-panel-subtle p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="admin-kicker">Yayin hazirligi</p>
+            <p className="mt-2 text-sm text-[#d7d2ca]">
+              {mapPublishReadiness.canPublish
+                ? 'Bu surum mobil ve mapsite yayini icin temel kontrollerden gecti.'
+                : 'Yayina almadan once asagidaki hatalari tamamlayin.'}
+            </p>
+          </div>
+          <span
+            className={`admin-pill px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] ${
+              mapPublishReadiness.canPublish ? 'text-emerald-200' : 'text-rose-200'
+            }`}
+          >
+            {mapPublishReadiness.canPublish ? 'Hazir' : 'Eksik'}
+          </span>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          {mapPublishReadiness.checks.map((checkItem) => {
+            const passed = checkItem.status === 'pass';
+            return (
+              <div
+                key={checkItem.code}
+                className={`border px-4 py-3 ${
+                  passed
+                    ? 'border-emerald-500/20 bg-emerald-950/10'
+                    : 'border-rose-500/25 bg-rose-950/15'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                      passed
+                        ? 'border-emerald-400/40 text-emerald-200'
+                        : 'border-rose-400/40 text-rose-200'
+                    }`}
+                  >
+                    {passed ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#F5F3EF]">{checkItem.label}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#8f96a3]">{checkItem.message}</p>
+                    {checkItem.details.length > 0 ? (
+                      <ul className="mt-3 space-y-1 text-xs leading-5 text-[#d7d2ca]">
+                        {checkItem.details.slice(0, 6).map((detail) => (
+                          <li key={detail}>{detail}</li>
+                        ))}
+                        {checkItem.details.length > 6 ? (
+                          <li>{checkItem.details.length - 6} kayit daha var.</li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   async function handleToggleUserStatus(user: AdminUserListItem) {
@@ -3325,7 +3554,7 @@ export default function AdminDashboard() {
                     {site.buildings.map((building: BuildingHierarchy) => (
                       <div key={building.id} className="rounded-2xl border border-white bg-white px-4 py-3">
                         <p className="text-sm font-semibold text-slate-900">{building.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-[#8f96a3]">
                           {building.floors.length} kat - {enumLabel(building.buildingType, buildingTypeOptions)}
                         </p>
                       </div>
@@ -3909,7 +4138,7 @@ export default function AdminDashboard() {
               {mapEditor ? (
                 <button
                   className="admin-action admin-action-accent inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
-                  disabled={busy}
+                  disabled={busy || !mapPublishReadiness?.canPublish}
                   onClick={handlePublishMapVersion}
                   type="button"
                 >
@@ -3945,6 +4174,8 @@ export default function AdminDashboard() {
                 Once bir harita surumu sec veya olustur.
               </div>
             )}
+
+            {renderMapPublishReadiness()}
           </div>
 
           {mapEditor ? renderMapCanvas() : null}
@@ -3953,6 +4184,26 @@ export default function AdminDashboard() {
             <div className={sectionCardClassName()}>
               <p className="admin-kicker">Dugum ekle</p>
               <div className="mt-6 grid gap-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {nodeTypeOptions.map((option) => {
+                    const active = nodeForm.nodeType === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        className={`admin-map-tool px-3 py-2 text-left text-xs font-semibold ${
+                          active ? 'admin-map-tool-active' : ''
+                        }`}
+                        onClick={() => {
+                          setNodeForm((current) => ({ ...current, nodeType: option.value }));
+                          setMapEditorTool('node');
+                        }}
+                        type="button"
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <FieldShell label="Etiket">
                   <input
                     className={inputClassName()}
@@ -4016,7 +4267,7 @@ export default function AdminDashboard() {
                 </label>
                 <button
                   className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
-                  disabled={busy || !selectedMapVersionId || !nodeForm.label.trim()}
+                  disabled={busy || !selectedMapVersionId || !selectedMapCanEdit || !nodeForm.label.trim()}
                   onClick={mapEditorSelection.editingNodeId ? handleUpdateNode : handleAddNode}
                   type="button"
                 >
@@ -4061,6 +4312,11 @@ export default function AdminDashboard() {
 
             <div className={sectionCardClassName()}>
               <p className="admin-kicker">Baglanti ekle</p>
+              {connectionStartNode ? (
+                <div className="admin-panel-subtle mt-4 p-3 text-xs leading-5 text-[#d7d2ca]">
+                  Canvas secimi: {connectionStartNode.code} - {connectionStartNode.label}
+                </div>
+              ) : null}
               <div className="mt-6 grid gap-4">
                 <FieldShell label="Baslangic dugumu">
                   <select
@@ -4140,6 +4396,7 @@ export default function AdminDashboard() {
                   disabled={
                     busy ||
                     !selectedMapVersionId ||
+                    !selectedMapCanEdit ||
                     !connectionForm.fromNodeId ||
                     !connectionForm.toNodeId ||
                     connectionForm.fromNodeId === connectionForm.toNodeId
@@ -4171,7 +4428,7 @@ export default function AdminDashboard() {
                         </p>
                         <div className="mt-3 flex gap-2">
                           <button className={actionButtonClassName('neutral')} onClick={() => startNodeEdit(node)} type="button">Duzenle</button>
-                          <button className={actionButtonClassName('danger')} onClick={() => void handleDeleteNode(node.id)} type="button">Sil</button>
+                          <button className={actionButtonClassName('danger')} disabled={!selectedMapCanEdit} onClick={() => void handleDeleteNode(node.id)} type="button">Sil</button>
                         </div>
                       </div>
                     ))}
@@ -4180,24 +4437,30 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-sm font-semibold text-[#F5F3EF]">Baglantilar</p>
                   <div className="mt-4 space-y-3">
-                    {mapEditor.connections.map((connection: FacilityMapConnection) => (
+                    {mapEditor.connections.map((connection: FacilityMapConnection) => {
+                      const fromNode = mapEditor.nodes.find((node) => node.id === connection.fromNodeId);
+                      const toNode = mapEditor.nodes.find((node) => node.id === connection.toNodeId);
+                      return (
                       <div
                         key={connection.id}
-                        className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4"
+                        className="admin-panel-subtle p-4"
                       >
-                        <p className="text-sm font-semibold text-slate-900">
-                          {connection.fromNodeId.slice(0, 8)} → {connection.toNodeId.slice(0, 8)}
+                        <p className="text-sm font-semibold text-[#F5F3EF]">
+                          {fromNode ? `${fromNode.code} - ${fromNode.label}` : connection.fromNodeId.slice(0, 8)}
+                          {' -> '}
+                          {toNode ? `${toNode.code} - ${toNode.label}` : connection.toNodeId.slice(0, 8)}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-[#8f96a3]">
                           {connection.distanceMeters}m -{' '}
                           {connection.isBidirectional ? 'Cift yonlu' : 'Tek yonlu'}
                         </p>
                         <div className="mt-3 flex gap-2">
-                          <button className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700" onClick={() => startConnectionEdit(connection)} type="button">Duzenle</button>
-                          <button className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700" onClick={() => void handleDeleteConnection(connection.id)} type="button">Sil</button>
+                          <button className={actionButtonClassName('neutral')} onClick={() => startConnectionEdit(connection)} type="button">Duzenle</button>
+                          <button className={actionButtonClassName('danger')} disabled={!selectedMapCanEdit} onClick={() => void handleDeleteConnection(connection.id)} type="button">Sil</button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -4950,7 +5213,8 @@ export default function AdminDashboard() {
             {activeView === 'maps' && selectedMapVersionId ? (
               <div className="flex justify-end">
                 <button
-                  className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f]"
+                  className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f] disabled:opacity-60"
+                  disabled={busy || !mapPublishReadiness?.canPublish}
                   onClick={handlePublishMapVersion}
                   type="button"
                 >

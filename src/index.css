@@ -254,14 +254,26 @@
   }
 
   .admin-shell .admin-action-accent {
-    border-color: rgba(24, 54, 185, 0.42);
-    background: rgba(24, 54, 185, 0.18);
+    border-color: #3f5cff;
+    background: #1836b9;
     color: #f5f3ef;
+    box-shadow: 0 10px 24px rgba(24, 54, 185, 0.24);
   }
 
   .admin-shell .admin-action-accent:hover {
-    border-color: rgba(24, 54, 185, 0.62);
-    background: rgba(24, 54, 185, 0.26);
+    border-color: #6f86ff;
+    background: #2144d8;
+  }
+
+  .admin-shell .admin-action:disabled,
+  .admin-shell .admin-action-accent:disabled,
+  .admin-shell .admin-action-danger:disabled {
+    cursor: not-allowed;
+    border-color: rgba(245, 243, 239, 0.08);
+    background: rgba(21, 25, 29, 0.62);
+    color: #737b89;
+    box-shadow: none;
+    opacity: 1;
   }
 
   .admin-shell .admin-action-danger {
@@ -289,6 +301,36 @@
   .admin-shell .admin-map-toolbar {
     border-bottom: 1px solid rgba(245, 243, 239, 0.08);
     background: rgba(13, 16, 19, 0.94);
+  }
+
+  .admin-shell .admin-map-tool {
+    border-radius: 6px;
+    border: 1px solid rgba(245, 243, 239, 0.1);
+    background: rgba(9, 11, 13, 0.78);
+    color: #b5bcc7;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      color 160ms ease;
+  }
+
+  .admin-shell .admin-map-tool:hover {
+    border-color: rgba(245, 243, 239, 0.18);
+    background: rgba(21, 25, 29, 0.95);
+    color: #f5f3ef;
+  }
+
+  .admin-shell .admin-map-tool-active {
+    border-color: #3f5cff;
+    background: rgba(24, 54, 185, 0.22);
+    color: #f5f3ef;
+  }
+
+  .admin-shell .admin-map-tool:disabled {
+    cursor: not-allowed;
+    border-color: rgba(245, 243, 239, 0.06);
+    background: rgba(21, 25, 29, 0.42);
+    color: #626b78;
   }
 
   .admin-shell .admin-pill {

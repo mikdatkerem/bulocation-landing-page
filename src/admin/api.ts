@@ -219,6 +219,20 @@ export type MapVersionEditor = {
   connections: FacilityMapConnection[];
 };
 
+export type MapPublishReadinessCheck = {
+  code: string;
+  label: string;
+  status: 'pass' | 'warning' | 'error' | string;
+  message: string;
+  details: string[];
+};
+
+export type MapPublishReadiness = {
+  mapVersionId: string;
+  canPublish: boolean;
+  checks: MapPublishReadinessCheck[];
+};
+
 export type ApiProblem = {
   status?: number;
   title?: string;
@@ -286,6 +300,10 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string): str
       const firstError = Object.values(error.errors ?? {}).flat()[0];
       return firstError || 'Form alanlarini kontrol edin.';
     }
+    case 'request_invalid':
+      return error.detail || 'Istek tamamlanamadi. Girdileri kontrol edin.';
+    case 'server_error':
+      return fallbackMessage;
     case 'invalid_token':
       return 'Baglanti veya dogrulama kodu gecerli degil ya da suresi doldu.';
     default:
@@ -692,6 +710,13 @@ export const adminApi = {
 
   getMapVersion: (token: string, mapVersionId: string) =>
     request<MapVersionEditor>(`/api/facility-maps/versions/${mapVersionId}`, {}, token),
+
+  getMapPublishReadiness: (token: string, mapVersionId: string) =>
+    request<MapPublishReadiness>(
+      `/api/facility-maps/versions/${mapVersionId}/publish-readiness`,
+      {},
+      token,
+    ),
 
   addMapNode: (
     token: string,
