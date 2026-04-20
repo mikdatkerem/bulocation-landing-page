@@ -243,8 +243,37 @@ function nodeTypeGeneratesQr(nodeType: number) {
 }
 
 function statusLabel(value: number | string) {
-  const numeric = typeof value === 'number' ? value : Number(value);
-  return { 1: 'Taslak', 2: 'Yayinda', 3: 'Arsiv' }[numeric] ?? String(value);
+  const key = mapVersionStatusKey(value);
+  return { draft: 'Taslak', published: 'Yayinda', archived: 'Arsiv' }[key] ?? String(value);
+}
+
+function mapVersionStatusKey(value: number | string) {
+  if (typeof value === 'number') {
+    return { 1: 'draft', 2: 'published', 3: 'archived' }[value] ?? 'unknown';
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['1', 'draft', 'taslak'].includes(normalized)) {
+    return 'draft';
+  }
+
+  if (['2', 'published', 'yayinda', 'yayında'].includes(normalized)) {
+    return 'published';
+  }
+
+  if (['3', 'archived', 'archive', 'arsiv', 'arşiv'].includes(normalized)) {
+    return 'archived';
+  }
+
+  return 'unknown';
+}
+
+function isDraftMapStatus(value: number | string | null | undefined) {
+  return value !== null && value !== undefined && mapVersionStatusKey(value) === 'draft';
+}
+
+function isPublishedMapStatus(value: number | string | null | undefined) {
+  return value !== null && value !== undefined && mapVersionStatusKey(value) === 'published';
 }
 
 function flattenSites(organizationHierarchy: OrganizationHierarchy | null) {
@@ -475,6 +504,50 @@ function stringifyPolygon(points: PolygonPoint[]) {
   return JSON.stringify(points);
 }
 
+function getMapsiteBaseUrl() {
+  const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  const configured = env?.VITE_MAPSITE_BASE_URL?.trim();
+
+  if (configured) {
+    return configured.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
+    if (isLocalHost) {
+      return 'http://localhost:3000';
+    }
+
+    return window.location.origin.replace(/\/$/, '');
+  }
+
+  return 'http://localhost:3000';
+}
+
+function buildMapsiteMapUrl(referenceId: string | null | undefined) {
+  const normalized = referenceId?.trim();
+  if (!normalized) {
+    return '';
+  }
+
+  return `${getMapsiteBaseUrl()}/map?ref=${encodeURIComponent(normalized)}`;
+}
+
+function buildMapsiteFloorUrl(floorId: string | null | undefined, embed = false) {
+  const normalized = floorId?.trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const params = new URLSearchParams({ floorId: normalized });
+  if (embed) {
+    params.set('embed', '1');
+  }
+
+  return `${getMapsiteBaseUrl()}/map?${params.toString()}`;
+}
+
 function snapToGrid(value: number, max: number, gridSize = CAMERA_ZONE_GRID_SIZE) {
   if (gridSize <= 1) {
     return Math.max(0, Math.min(value, max));
@@ -617,6 +690,7 @@ export default function AdminDashboard() {
   const [editingCameraZoneId, setEditingCameraZoneId] = useState<string>('');
   const [cameraZonePoints, setCameraZonePoints] = useState<PolygonPoint[]>([]);
   const [selectedNodeQrDataUrl, setSelectedNodeQrDataUrl] = useState<string>('');
+  const [copiedNodeLinkType, setCopiedNodeLinkType] = useState<string>('');
   const [nodeQrDataUrls, setNodeQrDataUrls] = useState<Record<string, string>>({});
   const [hiddenNodeIds, setHiddenNodeIds] = useState<Record<string, boolean>>({});
   const [mapCanvasSize, setMapCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
@@ -765,10 +839,24 @@ export default function AdminDashboard() {
   );
   const isParkingSpotNode = nodeForm.nodeType === 8;
   const generatesQrForNodeForm = nodeTypeGeneratesQr(nodeForm.nodeType);
-  const selectedMapCanEdit = Number(mapEditor?.status ?? 0) === 1;
+  const selectedMapCanEdit = isDraftMapStatus(mapEditor?.status);
+  const selectedMapIsPublished = isPublishedMapStatus(mapEditor?.status);
   const selectedMapNode = useMemo(
     () => mapEditor?.nodes.find((node) => node.id === mapEditorSelection.editingNodeId) ?? null,
     [mapEditor, mapEditorSelection.editingNodeId],
+  );
+  const selectedNodeReference = selectedMapNode?.externalReferenceId ?? '';
+  const selectedNodeMapsiteUrl = useMemo(
+    () => buildMapsiteMapUrl(selectedNodeReference),
+    [selectedNodeReference],
+  );
+  const selectedMapsiteFloorUrl = useMemo(
+    () => buildMapsiteFloorUrl(mapEditor?.floorId),
+    [mapEditor?.floorId],
+  );
+  const selectedMapsiteEmbedUrl = useMemo(
+    () => buildMapsiteFloorUrl(mapEditor?.floorId, true),
+    [mapEditor?.floorId],
   );
   const connectionStartNode = useMemo(
     () => mapEditor?.nodes.find((node) => node.id === connectionStartNodeId) ?? null,
@@ -1032,36 +1120,51 @@ export default function AdminDashboard() {
   }, [isSuperAdmin, session, userActionState.userSearchTerm]);
 
   useEffect(() => {
-    const referenceValue = selectedMapNode?.externalReferenceId;
-    if (!referenceValue || !nodeTypeGeneratesQr(selectedMapNode.nodeType)) {
+    const referenceValue = selectedNodeReference;
+    if (
+      !selectedMapNode ||
+      !referenceValue ||
+      !selectedNodeMapsiteUrl ||
+      !selectedMapIsPublished ||
+      !nodeTypeGeneratesQr(selectedMapNode.nodeType)
+    ) {
       setSelectedNodeQrDataUrl('');
       return;
     }
 
     let disposed = false;
-    void QRCode.toDataURL(referenceValue, {
+    const qrOptions = {
       margin: 1,
       width: 220,
       color: {
         dark: '#0f172a',
         light: '#ffffff',
       },
-    }).then((url: string) => {
-      if (!disposed) {
-        setSelectedNodeQrDataUrl(url);
-      }
-    }).catch(() => {
-      if (!disposed) {
-        setSelectedNodeQrDataUrl('');
-      }
-    });
+    };
+
+    void QRCode.toDataURL(selectedNodeMapsiteUrl, qrOptions)
+      .then((qrUrl: string) => {
+        if (!disposed) {
+          setSelectedNodeQrDataUrl(qrUrl);
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          setSelectedNodeQrDataUrl('');
+        }
+      });
 
     return () => {
       disposed = true;
     };
-  }, [selectedMapNode]);
+  }, [selectedMapIsPublished, selectedMapNode, selectedNodeMapsiteUrl, selectedNodeReference]);
 
   useEffect(() => {
+    if (!selectedMapIsPublished) {
+      setNodeQrDataUrls({});
+      return;
+    }
+
     const qrNodes = (mapEditor?.nodes ?? []).filter(
       (node) => nodeTypeGeneratesQr(node.nodeType) && node.externalReferenceId,
     );
@@ -1075,7 +1178,7 @@ export default function AdminDashboard() {
 
     void Promise.all(
       qrNodes.map(async (node) => {
-        const url = await QRCode.toDataURL(node.externalReferenceId!, {
+        const url = await QRCode.toDataURL(buildMapsiteMapUrl(node.externalReferenceId), {
           margin: 1,
           width: 72,
           color: {
@@ -1101,7 +1204,7 @@ export default function AdminDashboard() {
     return () => {
       disposed = true;
     };
-  }, [mapEditor]);
+  }, [mapEditor, selectedMapIsPublished]);
 
   useEffect(() => {
     if (!session) {
@@ -1274,10 +1377,8 @@ export default function AdminDashboard() {
 
     async function loadMapVersion() {
       try {
-        const [editor, readiness] = await Promise.all([
-          adminApi.getMapVersion(activeSession.accessToken, selectedMapVersionId),
-          adminApi.getMapPublishReadiness(activeSession.accessToken, selectedMapVersionId),
-        ]);
+        const editor = await adminApi.getMapVersion(activeSession.accessToken, selectedMapVersionId);
+        const readiness = await loadMapPublishReadinessOrNull(activeSession, selectedMapVersionId);
         if (!cancelled) {
           setMapEditor(editor);
           setMapPublishReadiness(readiness);
@@ -1339,13 +1440,19 @@ export default function AdminDashboard() {
       return null;
     }
 
-    const [editor, readiness] = await Promise.all([
-      adminApi.getMapVersion(activeSession.accessToken, mapVersionId),
-      adminApi.getMapPublishReadiness(activeSession.accessToken, mapVersionId),
-    ]);
+    const editor = await adminApi.getMapVersion(activeSession.accessToken, mapVersionId);
+    const readiness = await loadMapPublishReadinessOrNull(activeSession, mapVersionId);
     setMapEditor(editor);
     setMapPublishReadiness(readiness);
     return editor;
+  }
+
+  async function loadMapPublishReadinessOrNull(activeSession: Session, mapVersionId: string) {
+    try {
+      return await adminApi.getMapPublishReadiness(activeSession.accessToken, mapVersionId);
+    } catch {
+      return null;
+    }
   }
 
   async function runAction(action: () => Promise<void>, successMessage: string, errorMessage = 'Islem tamamlanamadi.') {
@@ -2616,7 +2723,19 @@ export default function AdminDashboard() {
       await adminApi.publishMapVersion(session.accessToken, selectedMapVersionId);
       await refreshHierarchy(session);
       await refreshMapVersion(session);
-    }, 'Harita surumu yayina alindi.');
+    }, `Harita surumu yayina alindi. Mapsite: ${buildMapsiteFloorUrl(mapEditor?.floorId)}`);
+  }
+
+  async function copyMapsiteLink(value: string, type: string) {
+    if (!value || typeof navigator === 'undefined' || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(value);
+    setCopiedNodeLinkType(type);
+    window.setTimeout(() => {
+      setCopiedNodeLinkType((current) => (current === type ? '' : current));
+    }, 1800);
   }
 
   function renderMapPublishReadiness() {
@@ -4136,15 +4255,33 @@ export default function AdminDashboard() {
                 </h3>
               </div>
               {mapEditor ? (
-                <button
-                  className="admin-action admin-action-accent inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
-                  disabled={busy || !mapPublishReadiness?.canPublish}
-                  onClick={handlePublishMapVersion}
-                  type="button"
-                >
-                  Yayinla
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <a
+                    className="admin-action inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold"
+                    href={selectedMapsiteFloorUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Mapsite
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                  <button
+                    className="admin-action inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold"
+                    onClick={() => void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed')}
+                    type="button"
+                  >
+                    {copiedNodeLinkType === 'embed' ? 'Embed kopyalandi' : 'Embed link'}
+                  </button>
+                  <button
+                    className="admin-action admin-action-accent inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                    disabled={busy}
+                    onClick={handlePublishMapVersion}
+                    type="button"
+                  >
+                    Yayinla
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
               ) : null}
             </div>
 
@@ -4176,6 +4313,44 @@ export default function AdminDashboard() {
             )}
 
             {renderMapPublishReadiness()}
+
+            {mapEditor ? (
+              <div className="admin-panel-subtle mt-6 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="admin-kicker">Mapsite linkleri</p>
+                    <p className="mt-2 text-sm leading-6 text-[#8f96a3]">
+                      Yayindaki kat haritasini web sitesi veya embed yuzeyinde acmak icin kullan.
+                    </p>
+                  </div>
+                  <span className="admin-pill px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
+                    {statusLabel(mapEditor.status)}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-3">
+                  <div className="border border-[rgba(245,243,239,0.08)] bg-[#0d1013] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">Kat linki</p>
+                    <p className="mt-2 break-all font-mono text-xs leading-5 text-[#d7d2ca]">{selectedMapsiteFloorUrl}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <a className={actionButtonClassName('neutral')} href={selectedMapsiteFloorUrl} rel="noreferrer" target="_blank">Ac</a>
+                      <button className={actionButtonClassName('neutral')} onClick={() => void copyMapsiteLink(selectedMapsiteFloorUrl, 'floor')} type="button">
+                        {copiedNodeLinkType === 'floor' ? 'Kopyalandi' : 'Kopyala'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="border border-[rgba(245,243,239,0.08)] bg-[#0d1013] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">Embed linki</p>
+                    <p className="mt-2 break-all font-mono text-xs leading-5 text-[#d7d2ca]">{selectedMapsiteEmbedUrl}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <a className={actionButtonClassName('neutral')} href={selectedMapsiteEmbedUrl} rel="noreferrer" target="_blank">Ac</a>
+                      <button className={actionButtonClassName('neutral')} onClick={() => void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed-panel')} type="button">
+                        {copiedNodeLinkType === 'embed-panel' ? 'Kopyalandi' : 'Kopyala'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {mapEditor ? renderMapCanvas() : null}
@@ -4183,6 +4358,23 @@ export default function AdminDashboard() {
           <div className="grid gap-6 xl:grid-cols-2">
             <div className={sectionCardClassName()}>
               <p className="admin-kicker">Dugum ekle</p>
+              {mapEditor && !selectedMapCanEdit ? (
+                <div className="admin-panel-subtle mt-4 p-4 text-sm leading-6 text-[#d7d2ca]">
+                  <p className="font-semibold text-[#F5F3EF]">
+                    Bu surum {statusLabel(mapEditor.status).toLowerCase()} oldugu icin kilitli.
+                  </p>
+                  <p className="mt-1 text-[#8f96a3]">
+                    Duzenlemek icin taslak kopya olustur; yeni kopya otomatik secilir.
+                  </p>
+                  <button
+                    className="admin-action admin-action-accent mt-3 inline-flex items-center justify-center px-4 py-2 text-sm font-semibold"
+                    onClick={() => void handleDuplicateMapVersion(mapEditor.id, mapEditor.name)}
+                    type="button"
+                  >
+                    Taslak kopya olustur
+                  </button>
+                </div>
+              ) : null}
               <div className="mt-6 grid gap-4">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {nodeTypeOptions.map((option) => {
@@ -4275,36 +4467,63 @@ export default function AdminDashboard() {
                   {mapEditorSelection.editingNodeId ? 'Dugumu guncelle' : 'Dugum ekle'}
                 </button>
                 {selectedMapNode && nodeTypeGeneratesQr(selectedMapNode.nodeType) ? (
-                  <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="admin-panel-subtle p-4">
                     <p className="admin-kicker">
-                      Otomatik QR
+                      QR ve linkler
                     </p>
                     <p className="mt-2 text-sm font-semibold text-[#F5F3EF]">
                       {selectedMapNode.code} - {selectedMapNode.label}
                     </p>
-                    {selectedNodeQrDataUrl ? (
-                      <div className="mt-4 flex items-center gap-4">
-                        <img
-                          alt={`${selectedMapNode.code} QR`}
-                          className="h-32 w-32 rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-white p-3"
-                          src={selectedNodeQrDataUrl}
-                        />
-                        <div className="space-y-3 text-xs leading-6 text-[#8f96a3]">
-                          <div>
-                            Bu QR kod mobil uygulamada dogrudan ilgili noktayi acar.
-                            <br />
-                            Park noktalarinda canli takip ayni nokta kaydi uzerinden ilerler.
-                          </div>
-                          <a
-                            className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
-                            download={`${selectedMapNode.code.toLowerCase()}-qr.png`}
-                            href={selectedNodeQrDataUrl}
-                          >
-                            QR indir
-                          </a>
+
+                      {!selectedMapIsPublished ? (
+                        <div className="mt-4 border border-dashed border-[rgba(245,243,239,0.12)] bg-[#0d1013] p-4 text-sm leading-6 text-[#8f96a3]">
+                          Bu QR canli mapsite linkidir. Taslak surumlerde kullanima acilmaz; haritayi yayina aldiktan sonra QR ve link burada gorunur.
                         </div>
-                      </div>
-                    ) : null}
+                      ) : selectedNodeQrDataUrl ? (
+                        <div className="mt-4 border border-[rgba(245,243,239,0.08)] bg-[#0d1013] p-4">
+                          <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+                            <img
+                              alt={`${selectedMapNode.code} QR`}
+                              className="h-32 w-32 shrink-0 rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-white p-3"
+                              src={selectedNodeQrDataUrl}
+                            />
+                            <div className="min-w-0 flex-1 space-y-3 text-xs leading-5 text-[#8f96a3]">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">
+                                  Tek QR linki
+                                </p>
+                                <p className="mt-2 break-all font-mono text-xs leading-5 text-[#d7d2ca]">
+                                  {selectedNodeMapsiteUrl}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <a
+                                  className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
+                                  href={selectedNodeMapsiteUrl}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  Mapsite'de ac
+                                </a>
+                                <a
+                                  className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
+                                  download={`${selectedMapNode.code.toLowerCase()}-qr.png`}
+                                  href={selectedNodeQrDataUrl}
+                                >
+                                  QR indir
+                                </a>
+                                <button
+                                  className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
+                                  onClick={() => void copyMapsiteLink(selectedNodeMapsiteUrl, 'node-mapsite')}
+                                  type="button"
+                                >
+                                  {copiedNodeLinkType === 'node-mapsite' ? 'Kopyalandi' : 'Link kopyala'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                   </div>
                 ) : null}
               </div>
@@ -5207,20 +5426,6 @@ export default function AdminDashboard() {
             {success ? (
               <div className="border border-emerald-500/30 bg-emerald-950/30 px-5 py-4 text-sm text-emerald-200">
                 {success}
-              </div>
-            ) : null}
-
-            {activeView === 'maps' && selectedMapVersionId ? (
-              <div className="flex justify-end">
-                <button
-                  className="inline-flex items-center gap-3 border border-[#a9c3ff] bg-[#a9c3ff] px-5 py-3 text-sm font-semibold text-[#0b234f] disabled:opacity-60"
-                  disabled={busy || !mapPublishReadiness?.canPublish}
-                  onClick={handlePublishMapVersion}
-                  type="button"
-                >
-                  <Upload className="h-4 w-4" />
-                  Yayınla
-                </button>
               </div>
             ) : null}
 

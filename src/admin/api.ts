@@ -213,7 +213,7 @@ export type MapVersionEditor = {
   assetContentType: string;
   width: number;
   height: number;
-  status: number;
+  status: number | string;
   publishedAt: string | null;
   nodes: FacilityMapNode[];
   connections: FacilityMapConnection[];
