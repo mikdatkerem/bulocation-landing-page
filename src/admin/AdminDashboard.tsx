@@ -466,6 +466,11 @@ function actionButtonClassName(tone: 'neutral' | 'danger' | 'accent' = 'neutral'
   return 'admin-action inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
 }
 
+function mapAssetUrl(assetPath: string) {
+  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  return normalizedPath.replace(/^\/storage\/maps/, '/admin-map-assets');
+}
+
 function getViewLabel(view: SidebarKey) {
   return sidebarItems.find((item) => item.key === view)?.label ?? view;
 }
@@ -2425,7 +2430,7 @@ export default function AdminDashboard() {
           <img
             alt={mapEditor.name}
             className="h-full w-full object-contain"
-            src={`/admin-api${mapEditor.assetPath}`}
+            src={mapAssetUrl(mapEditor.assetPath)}
           />
           <svg
             className="pointer-events-none absolute"
@@ -2629,7 +2634,7 @@ export default function AdminDashboard() {
           <img
             alt={cameraZoneMapEditor.name}
             className="h-full w-full object-contain"
-            src={`/admin-api${cameraZoneMapEditor.assetPath}`}
+            src={mapAssetUrl(cameraZoneMapEditor.assetPath)}
           />
           <svg
             className="pointer-events-none absolute"
