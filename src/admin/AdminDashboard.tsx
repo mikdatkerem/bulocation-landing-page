@@ -215,25 +215,29 @@ const parkingFacilityTypeOptions: Option[] = [
   { value: 4, label: 'Karma' },
 ];
 
-const nodeTypeOptions: Option[] = [
-  { value: 1, label: 'Gecis Noktasi' },
+const allNodeTypeOptions: Option[] = [
+  { value: 1, label: 'Yol Noktasi' },
   { value: 3, label: 'Giris' },
   { value: 4, label: 'Cikis' },
   { value: 5, label: 'Asansor' },
   { value: 6, label: 'Merdiven' },
   { value: 7, label: 'Rampa' },
-  { value: 8, label: 'Park Noktasi' },
+  { value: 8, label: 'Park Yeri' },
   { value: 9, label: 'Otopark Girisi' },
   { value: 10, label: 'Otopark Cikisi' },
   { value: 11, label: 'Kisitli Alan Cizgisi' },
 ];
+
+const nodeTypeOptions: Option[] = allNodeTypeOptions.filter(
+  (option) => option.value !== 7 && option.value !== 11,
+);
 
 const CAMERA_ZONE_GRID_SIZE = 24;
 
 function enumLabel(value: number | string, options: Option[]) {
   const numeric = typeof value === 'number' ? value : Number(value);
   if (numeric === 2) {
-    return 'Gecis Noktasi';
+    return 'Yol Noktasi';
   }
   return options.find((option) => option.value === numeric)?.label ?? String(value);
 }
@@ -685,6 +689,12 @@ export default function AdminDashboard() {
     organizationSearchTerm: '',
     selectedOrganizationAdminOrganizationId: '',
   });
+  const [mapGraphSearch, setMapGraphSearch] = useState({
+    nodeListTerm: '',
+    connectionListTerm: '',
+    fromNodeTerm: '',
+    toNodeTerm: '',
+  });
   const [mapEditorSelection, setMapEditorSelection] = useState<MapEditorSelectionState>({
     editingNodeId: '',
     editingConnectionId: '',
@@ -843,7 +853,6 @@ export default function AdminDashboard() {
     [isSuperAdmin],
   );
   const isParkingSpotNode = nodeForm.nodeType === 8;
-  const generatesQrForNodeForm = nodeTypeGeneratesQr(nodeForm.nodeType);
   const selectedMapCanEdit = isDraftMapStatus(mapEditor?.status);
   const selectedMapIsPublished = isPublishedMapStatus(mapEditor?.status);
   const selectedMapNode = useMemo(
@@ -867,6 +876,74 @@ export default function AdminDashboard() {
     () => mapEditor?.nodes.find((node) => node.id === connectionStartNodeId) ?? null,
     [connectionStartNodeId, mapEditor],
   );
+  const filteredFromNodes = useMemo(() => {
+    const search = mapGraphSearch.fromNodeTerm.trim().toLocaleLowerCase('tr-TR');
+    if (!mapEditor) {
+      return [] as FacilityMapNode[];
+    }
+
+    if (!search) {
+      return mapEditor.nodes;
+    }
+
+    return mapEditor.nodes.filter((node) => {
+      const code = node.code.toLocaleLowerCase('tr-TR');
+      const label = node.label.toLocaleLowerCase('tr-TR');
+      return code.includes(search) || label.includes(search);
+    });
+  }, [mapEditor, mapGraphSearch.fromNodeTerm]);
+  const filteredToNodes = useMemo(() => {
+    const search = mapGraphSearch.toNodeTerm.trim().toLocaleLowerCase('tr-TR');
+    if (!mapEditor) {
+      return [] as FacilityMapNode[];
+    }
+
+    if (!search) {
+      return mapEditor.nodes;
+    }
+
+    return mapEditor.nodes.filter((node) => {
+      const code = node.code.toLocaleLowerCase('tr-TR');
+      const label = node.label.toLocaleLowerCase('tr-TR');
+      return code.includes(search) || label.includes(search);
+    });
+  }, [mapEditor, mapGraphSearch.toNodeTerm]);
+  const filteredMapNodes = useMemo(() => {
+    const search = mapGraphSearch.nodeListTerm.trim().toLocaleLowerCase('tr-TR');
+    if (!mapEditor) {
+      return [] as FacilityMapNode[];
+    }
+
+    if (!search) {
+      return mapEditor.nodes;
+    }
+
+    return mapEditor.nodes.filter((node) => {
+      const code = node.code.toLocaleLowerCase('tr-TR');
+      const label = node.label.toLocaleLowerCase('tr-TR');
+      const type = enumLabel(node.nodeType, allNodeTypeOptions).toLocaleLowerCase('tr-TR');
+      return code.includes(search) || label.includes(search) || type.includes(search);
+    });
+  }, [mapEditor, mapGraphSearch.nodeListTerm]);
+  const filteredMapConnections = useMemo(() => {
+    const search = mapGraphSearch.connectionListTerm.trim().toLocaleLowerCase('tr-TR');
+    if (!mapEditor) {
+      return [] as FacilityMapConnection[];
+    }
+
+    if (!search) {
+      return mapEditor.connections;
+    }
+
+    return mapEditor.connections.filter((connection) => {
+      const fromNode = mapEditor.nodes.find((node) => node.id === connection.fromNodeId);
+      const toNode = mapEditor.nodes.find((node) => node.id === connection.toNodeId);
+      const fromText = `${fromNode?.code ?? ''} ${fromNode?.label ?? ''}`.toLocaleLowerCase('tr-TR');
+      const toText = `${toNode?.code ?? ''} ${toNode?.label ?? ''}`.toLocaleLowerCase('tr-TR');
+      const directionText = connection.isBidirectional ? 'cift yonlu' : 'tek yonlu';
+      return fromText.includes(search) || toText.includes(search) || directionText.includes(search);
+    });
+  }, [mapEditor, mapGraphSearch.connectionListTerm]);
   const selectedCamera = useMemo(
     () => cameras.find((camera) => camera.id === cameraZoneForm.cameraId) ?? null,
     [cameraZoneForm.cameraId, cameras],
@@ -4448,9 +4525,7 @@ export default function AdminDashboard() {
                 <CodeGuide>
                   {isParkingSpotNode
                     ? 'Bu nokta kaydedildiginde park kaydi ve QR kodu sistem tarafinda otomatik olusturulur.'
-                    : generatesQrForNodeForm
-                      ? 'Bu nokta kaydedildiginde QR kodu sistem tarafinda otomatik olusturulur.'
-                      : 'Kisitli alan cizgisinde sadece tur, etiket ve koordinat bilgisi tutulur.'}
+                    : 'Bu nokta kaydedildiginde QR kodu sistem tarafinda otomatik olusturulur.'}
                 </CodeGuide>
                 <label className="admin-panel-subtle flex items-center gap-3 px-4 py-3 text-sm text-[#d7d2ca]">
                   <input
@@ -4543,6 +4618,14 @@ export default function AdminDashboard() {
               ) : null}
               <div className="mt-6 grid gap-4">
                 <FieldShell label="Baslangic dugumu">
+                  <input
+                    className={`${inputClassName()} mb-3`}
+                    placeholder="Kod veya etiket ara"
+                    value={mapGraphSearch.fromNodeTerm}
+                    onChange={(event) =>
+                      setMapGraphSearch((current) => ({ ...current, fromNodeTerm: event.target.value }))
+                    }
+                  />
                   <select
                     className={selectClassName()}
                     value={connectionForm.fromNodeId}
@@ -4551,7 +4634,7 @@ export default function AdminDashboard() {
                     }
                   >
                     <option value="">Dugum sec</option>
-                    {mapEditor?.nodes.map((node: FacilityMapNode) => (
+                    {filteredFromNodes.map((node: FacilityMapNode) => (
                       <option key={node.id} value={node.id}>
                         {node.code} - {node.label}
                       </option>
@@ -4559,6 +4642,14 @@ export default function AdminDashboard() {
                   </select>
                 </FieldShell>
                 <FieldShell label="Hedef dugumu">
+                  <input
+                    className={`${inputClassName()} mb-3`}
+                    placeholder="Kod veya etiket ara"
+                    value={mapGraphSearch.toNodeTerm}
+                    onChange={(event) =>
+                      setMapGraphSearch((current) => ({ ...current, toNodeTerm: event.target.value }))
+                    }
+                  />
                   <select
                     className={selectClassName()}
                     value={connectionForm.toNodeId}
@@ -4567,7 +4658,7 @@ export default function AdminDashboard() {
                     }
                   >
                     <option value="">Dugum sec</option>
-                    {mapEditor?.nodes.map((node: FacilityMapNode) => (
+                    {filteredToNodes.map((node: FacilityMapNode) => (
                       <option key={node.id} value={node.id}>
                         {node.code} - {node.label}
                       </option>
@@ -4640,15 +4731,27 @@ export default function AdminDashboard() {
               <p className="admin-kicker">Mevcut grafik</p>
               <div className="mt-6 grid gap-6 xl:grid-cols-2">
                 <div>
-                  <p className="text-sm font-semibold text-[#F5F3EF]">Dugumler</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[#F5F3EF]">Dugumler</p>
+                    <div className="w-full max-w-xs">
+                      <input
+                        className={inputClassName()}
+                        placeholder="Kod, etiket veya tip ara"
+                        value={mapGraphSearch.nodeListTerm}
+                        onChange={(event) =>
+                          setMapGraphSearch((current) => ({ ...current, nodeListTerm: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
                   <div className="mt-4 space-y-3">
-                    {mapEditor.nodes.map((node: FacilityMapNode) => (
+                    {filteredMapNodes.map((node: FacilityMapNode) => (
                       <div key={node.id} className="admin-panel-subtle p-4">
                         <p className="text-sm font-semibold text-[#F5F3EF]">
                           {node.code} - {node.label}
                         </p>
                         <p className="mt-1 text-xs text-[#8f96a3]">
-                          {enumLabel(node.nodeType, nodeTypeOptions)} - ({node.pixelX}, {node.pixelY})
+                          {enumLabel(node.nodeType, allNodeTypeOptions)} - ({node.pixelX}, {node.pixelY})
                         </p>
                         <div className="mt-3 flex gap-2">
                           <button className={actionButtonClassName('neutral')} onClick={() => startNodeEdit(node)} type="button">Duzenle</button>
@@ -4659,9 +4762,21 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#F5F3EF]">Baglantilar</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[#F5F3EF]">Baglantilar</p>
+                    <div className="w-full max-w-xs">
+                      <input
+                        className={inputClassName()}
+                        placeholder="Baslangic veya hedef ara"
+                        value={mapGraphSearch.connectionListTerm}
+                        onChange={(event) =>
+                          setMapGraphSearch((current) => ({ ...current, connectionListTerm: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
                   <div className="mt-4 space-y-3">
-                    {mapEditor.connections.map((connection: FacilityMapConnection) => {
+                    {filteredMapConnections.map((connection: FacilityMapConnection) => {
                       const fromNode = mapEditor.nodes.find((node) => node.id === connection.fromNodeId);
                       const toNode = mapEditor.nodes.find((node) => node.id === connection.toNodeId);
                       return (
