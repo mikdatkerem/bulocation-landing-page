@@ -38,6 +38,7 @@ import {
   type CameraZoneHierarchy,
   type FacilityMapConnection,
   type FacilityMapNode,
+  type FacilityMapTransition,
   type MapAsset,
   type MapPublishReadiness,
   type MapVersionEditor,
@@ -153,6 +154,16 @@ type ConnectionForm = {
   isAccessible: boolean;
 };
 
+type TransitionForm = {
+  fromNodeId: string;
+  toMapVersionId: string;
+  toNodeId: string;
+  connectionType: number;
+  distanceMeters: number;
+  isBidirectional: boolean;
+  isAccessible: boolean;
+};
+
 type UserActionState = {
   selectedUserId: string;
   selectedRoleId: string;
@@ -231,6 +242,16 @@ const allNodeTypeOptions: Option[] = [
 const nodeTypeOptions: Option[] = allNodeTypeOptions.filter(
   (option) => option.value !== 7 && option.value !== 11,
 );
+
+const transitionTypeOptions: Option[] = [
+  { value: 1, label: 'Geçiş' },
+  { value: 2, label: 'Asansör' },
+  { value: 3, label: 'Merdiven' },
+  { value: 5, label: 'Giriş' },
+  { value: 6, label: 'Çıkış' },
+];
+
+const transitionConnectorNodeTypes = new Set([3, 4, 5, 6, 9, 10]);
 
 const CAMERA_ZONE_GRID_SIZE = 24;
 
@@ -612,6 +633,7 @@ export default function AdminDashboard() {
   const [mapEditor, setMapEditor] = useState<MapVersionEditor | null>(null);
   const [mapPublishReadiness, setMapPublishReadiness] = useState<MapPublishReadiness | null>(null);
   const [cameraZoneMapEditor, setCameraZoneMapEditor] = useState<MapVersionEditor | null>(null);
+  const [transitionTargetEditor, setTransitionTargetEditor] = useState<MapVersionEditor | null>(null);
   const [selectedMapVersionId, setSelectedMapVersionId] = useState<string>('');
   const [selectedMapSiteId, setSelectedMapSiteId] = useState<string>('');
   const [selectedMapBuildingId, setSelectedMapBuildingId] = useState<string>('');
@@ -682,6 +704,15 @@ export default function AdminDashboard() {
     isBidirectional: true,
     isAccessible: true,
   });
+  const [transitionForm, setTransitionForm] = useState<TransitionForm>({
+    fromNodeId: '',
+    toMapVersionId: '',
+    toNodeId: '',
+    connectionType: 1,
+    distanceMeters: 1,
+    isBidirectional: true,
+    isAccessible: true,
+  });
   const [userActionState, setUserActionState] = useState<UserActionState>({
     selectedUserId: '',
     selectedRoleId: '',
@@ -694,6 +725,9 @@ export default function AdminDashboard() {
     connectionListTerm: '',
     fromNodeTerm: '',
     toNodeTerm: '',
+    transitionFromNodeTerm: '',
+    transitionMapTerm: '',
+    transitionToNodeTerm: '',
   });
   const [mapEditorSelection, setMapEditorSelection] = useState<MapEditorSelectionState>({
     editingNodeId: '',
@@ -944,6 +978,73 @@ export default function AdminDashboard() {
       return fromText.includes(search) || toText.includes(search) || directionText.includes(search);
     });
   }, [mapEditor, mapGraphSearch.connectionListTerm]);
+  const selectedMapVersionSummary = useMemo(
+    () => mapVersions.find((version) => version.id === selectedMapVersionId) ?? null,
+    [mapVersions, selectedMapVersionId],
+  );
+  const mapVersionById = useMemo(
+    () => new globalThis.Map(mapVersions.map((version) => [version.id, version])),
+    [mapVersions],
+  );
+  const transitionTargetMapVersions = useMemo(() => {
+    if (!selectedMapVersionSummary) {
+      return [];
+    }
+
+    const search = mapGraphSearch.transitionMapTerm.trim().toLocaleLowerCase('tr-TR');
+    return mapVersions
+      .filter(
+        (version) =>
+          version.id !== selectedMapVersionSummary.id &&
+          version.buildingId === selectedMapVersionSummary.buildingId,
+      )
+      .filter((version) => {
+        if (!search) {
+          return true;
+        }
+
+        const text = `${version.name} ${version.floorName} ${version.floorCode} ${version.buildingName}`.toLocaleLowerCase(
+          'tr-TR',
+        );
+        return text.includes(search);
+      });
+  }, [mapGraphSearch.transitionMapTerm, mapVersions, selectedMapVersionSummary]);
+  const transitionSourceNodes = useMemo(() => {
+    const search = mapGraphSearch.transitionFromNodeTerm.trim().toLocaleLowerCase('tr-TR');
+    if (!mapEditor) {
+      return [] as FacilityMapNode[];
+    }
+
+    return mapEditor.nodes
+      .filter((node) => transitionConnectorNodeTypes.has(node.nodeType))
+      .filter((node) => {
+        if (!search) {
+          return true;
+        }
+
+        return `${node.code} ${node.label} ${enumLabel(node.nodeType, allNodeTypeOptions)}`
+          .toLocaleLowerCase('tr-TR')
+          .includes(search);
+      });
+  }, [mapEditor, mapGraphSearch.transitionFromNodeTerm]);
+  const transitionTargetNodes = useMemo(() => {
+    const search = mapGraphSearch.transitionToNodeTerm.trim().toLocaleLowerCase('tr-TR');
+    if (!transitionTargetEditor) {
+      return [] as FacilityMapNode[];
+    }
+
+    return transitionTargetEditor.nodes
+      .filter((node) => transitionConnectorNodeTypes.has(node.nodeType))
+      .filter((node) => {
+        if (!search) {
+          return true;
+        }
+
+        return `${node.code} ${node.label} ${enumLabel(node.nodeType, allNodeTypeOptions)}`
+          .toLocaleLowerCase('tr-TR')
+          .includes(search);
+      });
+  }, [mapGraphSearch.transitionToNodeTerm, transitionTargetEditor]);
   const selectedCamera = useMemo(
     () => cameras.find((camera) => camera.id === cameraZoneForm.cameraId) ?? null,
     [cameraZoneForm.cameraId, cameras],
@@ -1451,6 +1552,7 @@ export default function AdminDashboard() {
     if (!session || !selectedMapVersionId) {
       setMapEditor(null);
       setMapPublishReadiness(null);
+      setTransitionTargetEditor(null);
       return;
     }
 
@@ -1469,6 +1571,13 @@ export default function AdminDashboard() {
             fromNodeId: current.fromNodeId || editor.nodes[0]?.id || '',
             toNodeId: current.toNodeId || editor.nodes[1]?.id || '',
           }));
+          setTransitionForm((current) => ({
+            ...current,
+            fromNodeId:
+              current.fromNodeId && editor.nodes.some((node) => node.id === current.fromNodeId)
+                ? current.fromNodeId
+                : editor.nodes.find((node) => transitionConnectorNodeTypes.has(node.nodeType))?.id || '',
+          }));
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -1483,6 +1592,57 @@ export default function AdminDashboard() {
       cancelled = true;
     };
   }, [selectedMapVersionId, session]);
+
+  useEffect(() => {
+    if (!session || !transitionForm.toMapVersionId) {
+      setTransitionTargetEditor(null);
+      return;
+    }
+
+    const activeSession = session;
+    let cancelled = false;
+
+    async function loadTransitionTargetMap() {
+      try {
+        const editor = await adminApi.getMapVersion(activeSession.accessToken, transitionForm.toMapVersionId);
+        if (!cancelled) {
+          setTransitionTargetEditor(editor);
+          setTransitionForm((current) => ({
+            ...current,
+            toNodeId:
+              current.toNodeId && editor.nodes.some((node) => node.id === current.toNodeId)
+                ? current.toNodeId
+                : editor.nodes.find((node) => transitionConnectorNodeTypes.has(node.nodeType))?.id || '',
+          }));
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setTransitionTargetEditor(null);
+          setError(getApiErrorMessage(loadError, 'Hedef kat haritası yüklenemedi.'));
+        }
+      }
+    }
+
+    void loadTransitionTargetMap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session, transitionForm.toMapVersionId]);
+
+  useEffect(() => {
+    if (
+      transitionForm.toMapVersionId &&
+      !transitionTargetMapVersions.some((version) => version.id === transitionForm.toMapVersionId)
+    ) {
+      setTransitionTargetEditor(null);
+      setTransitionForm((current) => ({
+        ...current,
+        toMapVersionId: '',
+        toNodeId: '',
+      }));
+    }
+  }, [transitionForm.toMapVersionId, transitionTargetMapVersions]);
 
   async function refreshUsers(activeSession: Session) {
     if (!isSuperAdmin) {
@@ -2283,6 +2443,37 @@ export default function AdminDashboard() {
       }
       await refreshMapVersion(session);
     }, 'Baglanti silindi.');
+  }
+
+  async function handleAddTransition() {
+    if (!session || !selectedMapVersionId) {
+      return;
+    }
+
+    await runAction(async () => {
+      await adminApi.addMapTransition(session.accessToken, {
+        fromMapVersionId: selectedMapVersionId,
+        fromNodeId: transitionForm.fromNodeId,
+        toMapVersionId: transitionForm.toMapVersionId,
+        toNodeId: transitionForm.toNodeId,
+        connectionType: transitionForm.connectionType,
+        distanceMeters: Number(transitionForm.distanceMeters),
+        isBidirectional: transitionForm.isBidirectional,
+        isAccessible: transitionForm.isAccessible,
+      });
+      await refreshMapVersion(session);
+    }, 'Katlar arasi gecis eklendi.');
+  }
+
+  async function handleDeleteTransition(transitionId: string) {
+    if (!session) {
+      return;
+    }
+
+    await runAction(async () => {
+      await adminApi.deleteMapTransition(session.accessToken, transitionId);
+      await refreshMapVersion(session);
+    }, 'Katlar arasi gecis silindi.');
   }
 
   function startNodeEdit(node: FacilityMapNode) {
@@ -4437,7 +4628,7 @@ export default function AdminDashboard() {
 
           {mapEditor ? renderMapCanvas() : null}
 
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-2 2xl:grid-cols-3">
             <div className={sectionCardClassName()}>
               <p className="admin-kicker">Dugum ekle</p>
               {mapEditor && !selectedMapCanEdit ? (
@@ -4724,6 +4915,176 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </div>
+
+            <div className={sectionCardClassName()}>
+              <p className="admin-kicker">Kat geçişi ekle</p>
+              <div className="admin-panel-subtle mt-4 p-3 text-xs leading-5 text-[#8f96a3]">
+                Asansör, merdiven, giriş ve çıkış gibi geçiş düğümlerini aynı binadaki başka kat haritasına bağlar.
+              </div>
+              <div className="mt-6 grid gap-4">
+                <FieldShell label="Bu kattaki geçiş düğümü">
+                  <input
+                    className={`${inputClassName()} mb-3`}
+                    placeholder="Kod, etiket veya tip ara"
+                    value={mapGraphSearch.transitionFromNodeTerm}
+                    onChange={(event) =>
+                      setMapGraphSearch((current) => ({
+                        ...current,
+                        transitionFromNodeTerm: event.target.value,
+                      }))
+                    }
+                  />
+                  <select
+                    className={selectClassName()}
+                    value={transitionForm.fromNodeId}
+                    onChange={(event) =>
+                      setTransitionForm((current) => ({ ...current, fromNodeId: event.target.value }))
+                    }
+                  >
+                    <option value="">Düğüm seç</option>
+                    {transitionSourceNodes.map((node) => (
+                      <option key={node.id} value={node.id}>
+                        {node.code} - {node.label} / {enumLabel(node.nodeType, allNodeTypeOptions)}
+                      </option>
+                    ))}
+                  </select>
+                </FieldShell>
+                <FieldShell label="Hedef kat haritası">
+                  <input
+                    className={`${inputClassName()} mb-3`}
+                    placeholder="Kat veya harita adı ara"
+                    value={mapGraphSearch.transitionMapTerm}
+                    onChange={(event) =>
+                      setMapGraphSearch((current) => ({
+                        ...current,
+                        transitionMapTerm: event.target.value,
+                      }))
+                    }
+                  />
+                  <select
+                    className={selectClassName()}
+                    value={transitionForm.toMapVersionId}
+                    onChange={(event) =>
+                      setTransitionForm((current) => ({
+                        ...current,
+                        toMapVersionId: event.target.value,
+                        toNodeId: '',
+                      }))
+                    }
+                  >
+                    <option value="">Hedef harita seç</option>
+                    {transitionTargetMapVersions.map((version) => (
+                      <option key={version.id} value={version.id}>
+                        {version.floorName} - {version.name} / {statusLabel(version.status)}
+                      </option>
+                    ))}
+                  </select>
+                </FieldShell>
+                <FieldShell label="Hedef kattaki düğüm">
+                  <input
+                    className={`${inputClassName()} mb-3`}
+                    placeholder="Kod, etiket veya tip ara"
+                    value={mapGraphSearch.transitionToNodeTerm}
+                    onChange={(event) =>
+                      setMapGraphSearch((current) => ({
+                        ...current,
+                        transitionToNodeTerm: event.target.value,
+                      }))
+                    }
+                  />
+                  <select
+                    className={selectClassName()}
+                    disabled={!transitionTargetEditor}
+                    value={transitionForm.toNodeId}
+                    onChange={(event) =>
+                      setTransitionForm((current) => ({ ...current, toNodeId: event.target.value }))
+                    }
+                  >
+                    <option value="">Hedef düğüm seç</option>
+                    {transitionTargetNodes.map((node) => (
+                      <option key={node.id} value={node.id}>
+                        {node.code} - {node.label} / {enumLabel(node.nodeType, allNodeTypeOptions)}
+                      </option>
+                    ))}
+                  </select>
+                </FieldShell>
+                <FieldShell label="Geçiş tipi">
+                  <select
+                    className={selectClassName()}
+                    value={transitionForm.connectionType}
+                    onChange={(event) =>
+                      setTransitionForm((current) => ({
+                        ...current,
+                        connectionType: Number(event.target.value),
+                      }))
+                    }
+                  >
+                    {transitionTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </FieldShell>
+                <FieldShell label="Mesafe metre">
+                  <input
+                    className={inputClassName()}
+                    min="0.1"
+                    step="0.1"
+                    type="number"
+                    value={transitionForm.distanceMeters}
+                    onChange={(event) =>
+                      setTransitionForm((current) => ({
+                        ...current,
+                        distanceMeters: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </FieldShell>
+                <label className="admin-panel-subtle flex items-center gap-3 px-4 py-3 text-sm text-[#d7d2ca]">
+                  <input
+                    checked={transitionForm.isBidirectional}
+                    onChange={(event) =>
+                      setTransitionForm((current) => ({
+                        ...current,
+                        isBidirectional: event.target.checked,
+                      }))
+                    }
+                    type="checkbox"
+                  />
+                  Çift yönlü
+                </label>
+                <label className="admin-panel-subtle flex items-center gap-3 px-4 py-3 text-sm text-[#d7d2ca]">
+                  <input
+                    checked={transitionForm.isAccessible}
+                    onChange={(event) =>
+                      setTransitionForm((current) => ({
+                        ...current,
+                        isAccessible: event.target.checked,
+                      }))
+                    }
+                    type="checkbox"
+                  />
+                  Erişilebilir geçiş
+                </label>
+                <button
+                  className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                  disabled={
+                    busy ||
+                    !selectedMapVersionId ||
+                    !selectedMapCanEdit ||
+                    !transitionForm.fromNodeId ||
+                    !transitionForm.toMapVersionId ||
+                    !transitionForm.toNodeId
+                  }
+                  onClick={handleAddTransition}
+                  type="button"
+                >
+                  <Waypoints className="h-4 w-4" />
+                  Kat geçişi ekle
+                </button>
+              </div>
+            </div>
           </div>
 
           {mapEditor ? (
@@ -4801,6 +5162,66 @@ export default function AdminDashboard() {
                       );
                     })}
                   </div>
+                </div>
+              </div>
+              <div className="mt-8 border-t border-[rgba(245,243,239,0.08)] pt-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#F5F3EF]">Kat geçişleri</p>
+                    <p className="mt-1 text-xs leading-5 text-[#8f96a3]">
+                      Bu haritadan veya bu haritaya tanımlanan asansör, merdiven ve giriş bağlantıları.
+                    </p>
+                  </div>
+                  <span className="admin-pill px-3 py-1.5 text-xs font-semibold">
+                    {mapEditor.transitions.length} kayıt
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                  {mapEditor.transitions.length === 0 ? (
+                    <div className="admin-panel-subtle border-dashed p-4 text-sm text-[#8f96a3]">
+                      Henüz kat geçişi yok.
+                    </div>
+                  ) : null}
+                  {mapEditor.transitions.map((transition: FacilityMapTransition) => {
+                    const fromMap = mapVersionById.get(transition.fromMapVersionId);
+                    const toMap = mapVersionById.get(transition.toMapVersionId);
+                    const fromNode =
+                      transition.fromMapVersionId === mapEditor.id
+                        ? mapEditor.nodes.find((node) => node.id === transition.fromNodeId)
+                        : null;
+                    const toNode =
+                      transition.toMapVersionId === mapEditor.id
+                        ? mapEditor.nodes.find((node) => node.id === transition.toNodeId)
+                        : null;
+                    return (
+                      <div key={transition.id} className="admin-panel-subtle p-4">
+                        <p className="text-sm font-semibold text-[#F5F3EF]">
+                          {fromNode ? `${fromNode.code} - ${fromNode.label}` : fromMap?.floorName ?? 'Kaynak kat'}
+                          {' -> '}
+                          {toNode ? `${toNode.code} - ${toNode.label}` : toMap?.floorName ?? 'Hedef kat'}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[#8f96a3]">
+                          {fromMap ? `${fromMap.floorName} / ${fromMap.name}` : transition.fromMapVersionId.slice(0, 8)}
+                          {' -> '}
+                          {toMap ? `${toMap.floorName} / ${toMap.name}` : transition.toMapVersionId.slice(0, 8)}
+                        </p>
+                        <p className="mt-1 text-xs text-[#8f96a3]">
+                          {enumLabel(transition.connectionType, transitionTypeOptions)} - {transition.distanceMeters}m -{' '}
+                          {transition.isBidirectional ? 'Çift yönlü' : 'Tek yönlü'}
+                        </p>
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            className={actionButtonClassName('danger')}
+                            disabled={!selectedMapCanEdit}
+                            onClick={() => void handleDeleteTransition(transition.id)}
+                            type="button"
+                          >
+                            Sil
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

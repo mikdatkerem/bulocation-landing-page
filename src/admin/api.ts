@@ -204,6 +204,18 @@ export type FacilityMapConnection = {
   isAccessible: boolean;
 };
 
+export type FacilityMapTransition = {
+  id: string;
+  fromMapVersionId: string;
+  fromNodeId: string;
+  toMapVersionId: string;
+  toNodeId: string;
+  connectionType: number;
+  distanceMeters: number;
+  isAccessible: boolean;
+  isBidirectional: boolean;
+};
+
 export type MapVersionEditor = {
   id: string;
   floorId: string;
@@ -217,6 +229,7 @@ export type MapVersionEditor = {
   publishedAt: string | null;
   nodes: FacilityMapNode[];
   connections: FacilityMapConnection[];
+  transitions: FacilityMapTransition[];
 };
 
 export type MapPublishReadinessCheck = {
@@ -791,6 +804,48 @@ export const adminApi = {
 
   deleteMapConnection: (token: string, connectionId: string) =>
     request<void>(`/api/facility-maps/connections/${connectionId}`, { method: 'DELETE' }, token),
+
+  addMapTransition: (
+    token: string,
+    payload: {
+      fromMapVersionId: string;
+      fromNodeId: string;
+      toMapVersionId: string;
+      toNodeId: string;
+      connectionType: number;
+      distanceMeters: number;
+      isAccessible: boolean;
+      isBidirectional: boolean;
+    },
+  ) =>
+    request<string>(
+      '/api/facility-maps/transitions',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+
+  updateMapTransition: (
+    token: string,
+    transitionId: string,
+    payload: {
+      fromMapVersionId: string;
+      fromNodeId: string;
+      toMapVersionId: string;
+      toNodeId: string;
+      connectionType: number;
+      distanceMeters: number;
+      isAccessible: boolean;
+      isBidirectional: boolean;
+    },
+  ) =>
+    request<void>(
+      `/api/facility-maps/transitions/${transitionId}`,
+      { method: 'PUT', body: JSON.stringify(payload) },
+      token,
+    ),
+
+  deleteMapTransition: (token: string, transitionId: string) =>
+    request<void>(`/api/facility-maps/transitions/${transitionId}`, { method: 'DELETE' }, token),
 
   publishMapVersion: (token: string, mapVersionId: string) =>
     request<void>(
