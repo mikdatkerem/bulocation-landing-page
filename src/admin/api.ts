@@ -232,6 +232,16 @@ export type MapVersionEditor = {
   transitions: FacilityMapTransition[];
 };
 
+function normalizeMapVersionEditor(editor: MapVersionEditor): MapVersionEditor {
+  return {
+    ...editor,
+    assetContentType: editor.assetContentType ?? '',
+    nodes: editor.nodes ?? [],
+    connections: editor.connections ?? [],
+    transitions: editor.transitions ?? [],
+  };
+}
+
 export type MapPublishReadinessCheck = {
   code: string;
   label: string;
@@ -721,8 +731,10 @@ export const adminApi = {
   deleteMapVersion: (token: string, mapVersionId: string) =>
     request<void>(`/api/facility-maps/versions/${mapVersionId}`, { method: 'DELETE' }, token),
 
-  getMapVersion: (token: string, mapVersionId: string) =>
-    request<MapVersionEditor>(`/api/facility-maps/versions/${mapVersionId}`, {}, token),
+  getMapVersion: async (token: string, mapVersionId: string) =>
+    normalizeMapVersionEditor(
+      await request<MapVersionEditor>(`/api/facility-maps/versions/${mapVersionId}`, {}, token),
+    ),
 
   getMapPublishReadiness: (token: string, mapVersionId: string) =>
     request<MapPublishReadiness>(

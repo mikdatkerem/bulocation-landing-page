@@ -496,6 +496,10 @@ function mapAssetUrl(assetPath: string) {
   return normalizedPath.replace(/^\/storage\/maps/, '/admin-map-assets');
 }
 
+function isImageMapAsset(editor: Pick<MapVersionEditor, 'assetContentType'> | null | undefined) {
+  return editor?.assetContentType?.startsWith('image/') === true;
+}
+
 function getViewLabel(view: SidebarKey) {
   return sidebarItems.find((item) => item.key === view)?.label ?? view;
 }
@@ -2509,7 +2513,7 @@ export default function AdminDashboard() {
   }
 
   function handleMapCanvasClick(event: React.MouseEvent<HTMLDivElement>) {
-    if (!mapEditor || !mapEditor.assetContentType.startsWith('image/')) {
+    if (!mapEditor || !isImageMapAsset(mapEditor)) {
       return;
     }
 
@@ -2628,7 +2632,7 @@ export default function AdminDashboard() {
       return null;
     }
 
-    if (!mapEditor.assetContentType.startsWith('image/')) {
+    if (!isImageMapAsset(mapEditor)) {
       return (
         <div className="admin-panel-subtle rounded-[8px] border-dashed p-6 text-sm leading-6 text-[#8f96a3]">
           Bu surum gorsel olmayan bir dosya turu kullaniyor. PDF veya baska formatlar icin su anda sadece
@@ -2818,7 +2822,7 @@ export default function AdminDashboard() {
   }
 
   function handleCameraZoneCanvasClick(event: React.MouseEvent<HTMLDivElement>) {
-    if (!cameraZoneMapEditor || !cameraZoneMapEditor.assetContentType.startsWith('image/')) {
+    if (!cameraZoneMapEditor || !isImageMapAsset(cameraZoneMapEditor)) {
       return;
     }
 
@@ -2867,7 +2871,7 @@ export default function AdminDashboard() {
       );
     }
 
-    if (!cameraZoneMapEditor.assetContentType.startsWith('image/')) {
+    if (!isImageMapAsset(cameraZoneMapEditor)) {
       return (
         <div className="admin-panel-subtle rounded-[8px] border-dashed p-5 text-sm text-[#8f96a3]">
           Kamera bolgesi cizimi su anda yalnizca gorsel haritalarda destekleniyor.
@@ -4339,6 +4343,8 @@ export default function AdminDashboard() {
   }
 
   function renderMaps() {
+    const mapTransitions = mapEditor?.transitions ?? [];
+
     return (
       <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
         <div className="space-y-6">
@@ -5173,16 +5179,16 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <span className="admin-pill px-3 py-1.5 text-xs font-semibold">
-                    {mapEditor.transitions.length} kayıt
+                    {mapTransitions.length} kayıt
                   </span>
                 </div>
                 <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                  {mapEditor.transitions.length === 0 ? (
+                  {mapTransitions.length === 0 ? (
                     <div className="admin-panel-subtle border-dashed p-4 text-sm text-[#8f96a3]">
                       Henüz kat geçişi yok.
                     </div>
                   ) : null}
-                  {mapEditor.transitions.map((transition: FacilityMapTransition) => {
+                  {mapTransitions.map((transition: FacilityMapTransition) => {
                     const fromMap = mapVersionById.get(transition.fromMapVersionId);
                     const toMap = mapVersionById.get(transition.toMapVersionId);
                     const fromNode =
