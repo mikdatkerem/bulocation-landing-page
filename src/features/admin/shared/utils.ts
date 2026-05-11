@@ -1,5 +1,4 @@
 import type {
-  BuildingHierarchy,
   MapVersionEditor,
   OrganizationHierarchy,
 } from './services/adminApi';

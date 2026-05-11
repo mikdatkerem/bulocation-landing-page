@@ -1,31 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import QRCode from 'qrcode';
 import {
-  Activity,
   ArrowRight,
-  Bell,
-  Building2,
   Check,
   ChevronRight,
-  Compass,
   Eye,
   EyeOff,
-  HelpCircle,
   MousePointer2,
-  LogOut,
-  Map,
-  ParkingCircle,
   Plus,
   RotateCcw,
-  ShieldCheck,
   Trash2,
   Upload,
-  Users,
   Waypoints,
   X,
 } from 'lucide-react';
-import AdminLogin from './AdminLogin';
+import AdminLogin from '../../admin/AdminLogin';
 import {
   adminApi,
   type AdminUserSearchResult,
@@ -49,574 +38,79 @@ import {
   type RoleDto,
   type SiteHierarchy,
   type UserProfile,
-} from './api';
-
-type Session = {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
-};
-
-type SidebarKey = 'overview' | 'organizations' | 'facilities' | 'maps' | 'parking' | 'cameras' | 'users' | 'security';
-type FacilityTab = 'sites' | 'buildings' | 'floors';
-type ParkingTab = 'facilities' | 'zones';
-
-type Option = {
-  value: number;
-  label: string;
-};
-
-type SearchOption = {
-  value: string;
-  label: string;
-  hint?: string;
-};
-
-const ADMIN_SESSION_STORAGE_KEY = 'bulocation.admin.session';
-
-type SiteForm = {
-  code: string;
-  name: string;
-  siteType: number;
-  address: string;
-};
-
-type BuildingForm = {
-  siteId: string;
-  code: string;
-  name: string;
-  buildingType: number;
-};
-
-type FloorForm = {
-  buildingId: string;
-  code: string;
-  name: string;
-  level: number;
-};
-
-type ParkingFacilityForm = {
-  siteId: string;
-  buildingId: string;
-  code: string;
-  name: string;
-  facilityType: number;
-};
-
-type ParkingZoneForm = {
-  parkingFacilityId: string;
-  floorId: string;
-  code: string;
-  name: string;
-};
-
-type CameraForm = {
-  siteId: string;
-  buildingId: string;
-  floorId: string;
-  parkingFacilityId: string;
-  name: string;
-  ipAddress: string;
-  streamUrl: string;
-  notes: string;
-};
-
-type CameraZoneForm = {
-  cameraId: string;
-  parkingZoneId: string;
-  mapVersionId: string;
-  name: string;
-  detectionThreshold: number;
-  polygonJson: string;
-};
-
-type MapVersionForm = {
-  floorId: string;
-  name: string;
-  width: number;
-  height: number;
-};
-
-type NodeForm = {
-  label: string;
-  nodeType: number;
-  pixelX: number;
-  pixelY: number;
-  isAccessible: boolean;
-};
-
-type ConnectionForm = {
-  fromNodeId: string;
-  toNodeId: string;
-  distanceMeters: number;
-  isBidirectional: boolean;
-  isAccessible: boolean;
-};
-
-type TransitionForm = {
-  fromNodeId: string;
-  toMapVersionId: string;
-  toNodeId: string;
-  connectionType: number;
-  distanceMeters: number;
-  isBidirectional: boolean;
-  isAccessible: boolean;
-};
-
-type UserActionState = {
-  selectedUserId: string;
-  selectedRoleId: string;
-  userSearchTerm: string;
-  organizationSearchTerm: string;
-  selectedOrganizationAdminOrganizationId: string;
-};
-
-type MapEditorSelectionState = {
-  editingNodeId: string;
-  editingConnectionId: string;
-};
-
-type MapEditorTool = 'select' | 'node' | 'connection';
-
-type PolygonPoint = {
-  x: number;
-  y: number;
-};
-
-type CanvasSize = {
-  width: number;
-  height: number;
-};
-
-const sidebarItems: { key: SidebarKey; label: string; icon: typeof Activity }[] = [
-  { key: 'overview', label: 'Panel', icon: Activity },
-  { key: 'organizations', label: 'Organizasyonlar', icon: Building2 },
-  { key: 'facilities', label: 'Tesisler', icon: Building2 },
-  { key: 'maps', label: 'Haritalar', icon: Map },
-  { key: 'parking', label: 'Otopark', icon: ParkingCircle },
-  { key: 'cameras', label: 'Kameralar', icon: Compass },
-  { key: 'users', label: 'Kullanicilar', icon: Users },
-  { key: 'security', label: 'Guvenlik', icon: ShieldCheck },
-];
-
-const siteTypeOptions: Option[] = [
-  { value: 1, label: 'Hastane' },
-  { value: 2, label: 'Otopark Kampusu' },
-  { value: 3, label: 'AVM' },
-  { value: 4, label: 'Universite' },
-  { value: 5, label: 'Kamu Tesisi' },
-  { value: 6, label: 'Karma Kullanim' },
-];
-
-const buildingTypeOptions: Option[] = [
-  { value: 1, label: 'Ana Bina' },
-  { value: 2, label: 'Klinik' },
-  { value: 3, label: 'Acil' },
-  { value: 4, label: 'Otopark' },
-  { value: 5, label: 'Ofis' },
-  { value: 6, label: 'Ek Bina' },
-  { value: 99, label: 'Diger' },
-];
-
-const parkingFacilityTypeOptions: Option[] = [
-  { value: 1, label: 'Acik Otopark' },
-  { value: 2, label: 'Kapali Otopark' },
-  { value: 3, label: 'Vale' },
-  { value: 4, label: 'Karma' },
-];
-
-const allNodeTypeOptions: Option[] = [
-  { value: 1, label: 'Yol Noktasi' },
-  { value: 3, label: 'Giris' },
-  { value: 4, label: 'Cikis' },
-  { value: 5, label: 'Asansor' },
-  { value: 6, label: 'Merdiven' },
-  { value: 7, label: 'Rampa' },
-  { value: 8, label: 'Park Yeri' },
-  { value: 9, label: 'Otopark Girisi' },
-  { value: 10, label: 'Otopark Cikisi' },
-  { value: 11, label: 'Kisitli Alan Cizgisi' },
-];
-
-const nodeTypeOptions: Option[] = allNodeTypeOptions.filter(
-  (option) => option.value !== 7 && option.value !== 11,
-);
-
-const transitionTypeOptions: Option[] = [
-  { value: 1, label: 'Geçiş' },
-  { value: 2, label: 'Asansör' },
-  { value: 3, label: 'Merdiven' },
-  { value: 5, label: 'Giriş' },
-  { value: 6, label: 'Çıkış' },
-];
-
-const transitionConnectorNodeTypes = new Set([3, 4, 5, 6, 9, 10]);
-
-const CAMERA_ZONE_GRID_SIZE = 24;
-
-function enumLabel(value: number | string, options: Option[]) {
-  const numeric = typeof value === 'number' ? value : Number(value);
-  if (numeric === 2) {
-    return 'Yol Noktasi';
-  }
-  return options.find((option) => option.value === numeric)?.label ?? String(value);
-}
-
-function nodeTypeGeneratesQr(nodeType: number) {
-  return nodeType !== 11;
-}
-
-function statusLabel(value: number | string) {
-  const key = mapVersionStatusKey(value);
-  return { draft: 'Taslak', published: 'Yayinda', archived: 'Arsiv' }[key] ?? String(value);
-}
-
-function mapVersionStatusKey(value: number | string) {
-  if (typeof value === 'number') {
-    return { 1: 'draft', 2: 'published', 3: 'archived' }[value] ?? 'unknown';
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (['1', 'draft', 'taslak'].includes(normalized)) {
-    return 'draft';
-  }
-
-  if (['2', 'published', 'yayinda', 'yayında'].includes(normalized)) {
-    return 'published';
-  }
-
-  if (['3', 'archived', 'archive', 'arsiv', 'arşiv'].includes(normalized)) {
-    return 'archived';
-  }
-
-  return 'unknown';
-}
-
-function isDraftMapStatus(value: number | string | null | undefined) {
-  return value !== null && value !== undefined && mapVersionStatusKey(value) === 'draft';
-}
-
-function isPublishedMapStatus(value: number | string | null | undefined) {
-  return value !== null && value !== undefined && mapVersionStatusKey(value) === 'published';
-}
-
-function flattenSites(organizationHierarchy: OrganizationHierarchy | null) {
-  return organizationHierarchy?.sites ?? [];
-}
-
-function flattenBuildings(organizationHierarchy: OrganizationHierarchy | null) {
-  return flattenSites(organizationHierarchy).flatMap((site) =>
-    site.buildings.map((building) => ({
-      ...building,
-      siteId: site.id,
-      siteName: site.name,
-    })),
-  );
-}
-
-function flattenFloors(organizationHierarchy: OrganizationHierarchy | null) {
-  return flattenBuildings(organizationHierarchy).flatMap((building) =>
-    building.floors.map((floor) => ({
-      ...floor,
-      buildingId: building.id,
-      buildingName: building.name,
-      siteId: building.siteId,
-      siteName: building.siteName,
-    })),
-  );
-}
-
-function flattenParkingFacilities(organizationHierarchy: OrganizationHierarchy | null) {
-  return flattenSites(organizationHierarchy).flatMap((site) => site.parkingFacilities);
-}
-
-function flattenCameras(organizationHierarchy: OrganizationHierarchy | null) {
-  return flattenSites(organizationHierarchy).flatMap((site) =>
-    site.cameras.map((camera) => ({
-      ...camera,
-      siteId: site.id,
-      siteName: site.name,
-    })),
-  );
-}
-
-function flattenMapVersions(organizationHierarchy: OrganizationHierarchy | null) {
-  return flattenFloors(organizationHierarchy).flatMap((floor) =>
-    floor.mapVersions.map((version) => ({
-      ...version,
-      floorId: floor.id,
-      floorName: floor.name,
-      floorCode: floor.code,
-      buildingId: floor.buildingId,
-      buildingName: floor.buildingName,
-      siteId: floor.siteId,
-      siteName: floor.siteName,
-    })),
-  );
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return 'Mevcut degil';
-  }
-
-  return new Date(value).toLocaleString();
-}
-
-function FieldShell({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="admin-kicker mb-2 block">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function SearchableSelect({
-  label,
-  value,
-  options,
-  placeholder,
-  emptyText,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: SearchOption[];
-  placeholder: string;
-  emptyText: string;
-  onChange: (value: string) => void;
-}) {
-  const [query, setQuery] = useState('');
-  const selectedOption = useMemo(
-    () => options.find((option) => option.value === value) ?? null,
-    [options, value],
-  );
-
-  const filteredOptions = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) {
-      return options;
-    }
-
-    return options.filter((option) =>
-      `${option.label} ${option.hint ?? ''}`.toLowerCase().includes(normalized),
-    );
-  }, [options, query]);
-
-  return (
-    <FieldShell label={label}>
-      <div className="space-y-3">
-        <input
-          className={inputClassName()}
-          placeholder={placeholder}
-          value={query || selectedOption?.label || ''}
-          onChange={(event) => {
-            const nextQuery = event.target.value;
-            setQuery(nextQuery);
-            const exact = options.find((option) => option.label === nextQuery);
-            if (!nextQuery.trim()) {
-              onChange('');
-            } else if (exact) {
-              onChange(exact.value);
-            }
-          }}
-        />
-        <select
-          className={selectClassName()}
-          value={value}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            onChange(nextValue);
-            setQuery('');
-          }}
-        >
-          <option value="">{emptyText}</option>
-          {filteredOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.hint ? `${option.label} - ${option.hint}` : option.label}
-            </option>
-          ))}
-        </select>
-        <div className="rounded-none border border-[#23314d] bg-[#0f1727] px-3 py-2 text-xs text-slate-400">
-          {value
-            ? `Secili kayit: ${selectedOption?.label ?? value}`
-            : emptyText}
-        </div>
-      </div>
-    </FieldShell>
-  );
-}
-
-function inputClassName() {
-  return 'admin-input px-4 py-3 text-sm';
-}
-
-function selectClassName() {
-  return `${inputClassName()} appearance-none pr-10`;
-}
-
-function sectionCardClassName() {
-  return 'admin-panel-card p-6 lg:p-8';
-}
-
-function CodeGuide({ children }: { children: ReactNode }) {
-  return <p className="text-xs leading-5 text-slate-400">{children}</p>;
-}
-
-function rowCardClassName(active = false) {
-  return `w-full rounded-[8px] border px-4 py-4 text-left transition ${
-    active
-      ? 'border-[#1836B9] bg-[#101520] text-[#F5F3EF] shadow-[0_20px_40px_rgba(0,0,0,0.28)]'
-      : 'border-[rgba(245,243,239,0.08)] bg-[#0d1013] text-[#d7d2ca] hover:border-[rgba(245,243,239,0.16)] hover:bg-[#14181d]'
-  }`;
-}
-
-function subtlePanelClassName() {
-  return 'admin-panel-subtle';
-}
-
-function actionButtonClassName(tone: 'neutral' | 'danger' | 'accent' = 'neutral') {
-  if (tone === 'danger') {
-    return 'admin-action admin-action-danger inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
-  }
-
-  if (tone === 'accent') {
-    return 'admin-action admin-action-accent inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
-  }
-
-  return 'admin-action inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition';
-}
-
-function mapAssetUrl(assetPath: string) {
-  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-  return normalizedPath.replace(/^\/storage\/maps/, '/admin-map-assets');
-}
-
-function isImageMapAsset(editor: Pick<MapVersionEditor, 'assetContentType'> | null | undefined) {
-  return editor?.assetContentType?.startsWith('image/') === true;
-}
-
-function getViewLabel(view: SidebarKey) {
-  return sidebarItems.find((item) => item.key === view)?.label ?? view;
-}
-
-function topNavTabs(activeView: SidebarKey, activeViewLabel: string) {
-  const tabs = [
-    { key: 'overview' as SidebarKey, label: 'Panel', active: activeView === 'overview' },
-  ];
-
-  if (activeView !== 'overview') {
-    tabs.push({ key: activeView, label: activeViewLabel, active: true });
-  }
-
-  return tabs;
-}
-
-function parsePolygonJson(value: string | null | undefined) {
-  if (!value?.trim()) {
-    return [] as PolygonPoint[];
-  }
-
-  try {
-    const parsed = JSON.parse(value) as Array<{ x: number; y: number }>;
-    return parsed
-      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
-      .map((point) => ({
-        x: Math.round(point.x),
-        y: Math.round(point.y),
-      }));
-  } catch {
-    return [] as PolygonPoint[];
-  }
-}
-
-function stringifyPolygon(points: PolygonPoint[]) {
-  return JSON.stringify(points);
-}
-
-function getMapsiteBaseUrl() {
-  const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
-  const configured = env?.VITE_MAPSITE_BASE_URL?.trim();
-
-  if (configured) {
-    return configured.replace(/\/$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
-    const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-
-    if (isLocalHost) {
-      return 'http://localhost:3000';
-    }
-
-    return window.location.origin.replace(/\/$/, '');
-  }
-
-  return 'http://localhost:3000';
-}
-
-function buildMapsiteMapUrl(referenceId: string | null | undefined) {
-  const normalized = referenceId?.trim();
-  if (!normalized) {
-    return '';
-  }
-
-  return `${getMapsiteBaseUrl()}/map?ref=${encodeURIComponent(normalized)}`;
-}
-
-function buildMapsiteFloorUrl(floorId: string | null | undefined, embed = false) {
-  const normalized = floorId?.trim();
-  if (!normalized) {
-    return '';
-  }
-
-  const params = new URLSearchParams({ floorId: normalized });
-  if (embed) {
-    params.set('embed', '1');
-  }
-
-  return `${getMapsiteBaseUrl()}/map?${params.toString()}`;
-}
-
-function snapToGrid(value: number, max: number, gridSize = CAMERA_ZONE_GRID_SIZE) {
-  if (gridSize <= 1) {
-    return Math.max(0, Math.min(value, max));
-  }
-
-  const snapped = Math.round(value / gridSize) * gridSize;
-  return Math.max(0, Math.min(snapped, max));
-}
-
-function resolveContainedImageRect(
-  containerWidth: number,
-  containerHeight: number,
-  imageWidth: number,
-  imageHeight: number,
-) {
-  if (!containerWidth || !containerHeight || !imageWidth || !imageHeight) {
-    return {
-      left: 0,
-      top: 0,
-      width: containerWidth,
-      height: containerHeight,
-    };
-  }
-
-  const scale = Math.min(containerWidth / imageWidth, containerHeight / imageHeight);
-  const width = imageWidth * scale;
-  const height = imageHeight * scale;
-
-  return {
-    left: (containerWidth - width) / 2,
-    top: (containerHeight - height) / 2,
-    width,
-    height,
-  };
-}
+} from './shared/services/adminApi';
+import AdminShell from './layout/AdminShell';
+import AdminSidebar from './layout/AdminSidebar';
+import AdminTopbar from './layout/AdminTopbar';
+import DashboardOverview from './dashboard/DashboardOverview';
+import OrganizationManagement from './organizations/OrganizationManagement';
+import CodeGuide from './shared/components/CodeGuide';
+import FieldShell from './shared/components/FieldShell';
+import SearchableSelect from './shared/components/SearchableSelect';
+import {
+  ADMIN_SESSION_STORAGE_KEY,
+  allNodeTypeOptions,
+  buildingTypeOptions,
+  nodeTypeOptions,
+  parkingFacilityTypeOptions,
+  CAMERA_ZONE_GRID_SIZE,
+  sidebarItems,
+  siteTypeOptions,
+  transitionConnectorNodeTypes,
+  transitionTypeOptions,
+} from './shared/constants';
+import type {
+  BuildingForm,
+  CameraForm,
+  CameraZoneForm,
+  CanvasSize,
+  ConnectionForm,
+  FacilityTab,
+  FloorForm,
+  MapEditorSelectionState,
+  MapEditorTool,
+  MapVersionForm,
+  NodeForm,
+  ParkingFacilityForm,
+  ParkingTab,
+  ParkingZoneForm,
+  PolygonPoint,
+  Session,
+  SidebarKey,
+  SiteForm,
+  TransitionForm,
+  UserActionState,
+} from './shared/types/admin.types';
+import {
+  actionButtonClassName,
+  buildMapsiteFloorUrl,
+  buildMapsiteMapUrl,
+  enumLabel,
+  flattenBuildings,
+  flattenCameras,
+  flattenFloors,
+  flattenMapVersions,
+  flattenParkingFacilities,
+  flattenSites,
+  formatDate,
+  getViewLabel,
+  inputClassName,
+  isDraftMapStatus,
+  isImageMapAsset,
+  isPublishedMapStatus,
+  mapAssetUrl,
+  nodeTypeGeneratesQr,
+  parsePolygonJson,
+  resolveContainedImageRect,
+  rowCardClassName,
+  sectionCardClassName,
+  selectClassName,
+  snapToGrid,
+  statusLabel,
+  stringifyPolygon,
+  subtlePanelClassName,
+  topNavTabs,
+} from './shared/utils';
 
 export default function AdminDashboard() {
   const [session, setSession] = useState<Session | null>(null);
@@ -3177,141 +2671,38 @@ export default function AdminDashboard() {
 
   function renderOrganizations() {
     return (
-      <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className={sectionCardClassName()}>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organizasyon kayitlari</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-950">Kurumsal sahiplik yapisi</h3>
-            </div>
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
-              {organizations.length} kayit
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            {organizations.length === 0 ? (
-              <div className="border border-dashed border-[#2b3d5f] bg-[#0d1422] p-5 text-sm text-slate-400">
-                Henuz organizasyon yok.
-              </div>
-            ) : (
-              organizations.map((organization) => {
-                const active = organization.id === selectedOrganizationId;
-                return (
-                  <button
-                    key={organization.id}
-                    className={rowCardClassName(active)}
-                    onClick={() => setSelectedOrganizationId(organization.id)}
-                    type="button"
-                  >
-                    <p className="text-sm font-semibold">{organization.name}</p>
-                    <p className={`mt-2 text-xs leading-6 ${active ? 'text-slate-300' : 'text-slate-400'}`}>
-                      {organization.description || 'Aciklama yok'}
-                    </p>
-                        <div className="mt-3 flex gap-2">
-                          <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleUpdateOrganization(organization); }}>
-                            Duzenle
-                          </span>
-                          {isSuperAdmin ? (
-                            <span className={actionButtonClassName('danger')} onClick={(event) => { event.stopPropagation(); void handleDeleteOrganization(organization.id); }}>
-                              Sil
-                            </span>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          {isSuperAdmin ? (
-            <div className={sectionCardClassName()}>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organizasyon olustur</p>
-              <h3 className="mt-2 text-2xl font-semibold text-white">Yeni kurum ekle</h3>
-              <div className="mt-6 grid gap-4">
-                <FieldShell label="Ad">
-                  <input className={inputClassName()} placeholder="Ornek: Acibadem Saglik Grubu" value={organizationForm.name} onChange={(event) => setOrganizationForm((current) => ({ ...current, name: event.target.value }))} />
-                </FieldShell>
-                <FieldShell label="Aciklama">
-                  <textarea className={`${inputClassName()} min-h-28 resize-y`} placeholder="Bu organizasyonun kapsami ve yonetim notu" value={organizationForm.description} onChange={(event) => setOrganizationForm((current) => ({ ...current, description: event.target.value }))} />
-                </FieldShell>
-                <CodeGuide>Organizasyon seviyesinde kod yok. Kod yapisi yerleske, bina, kat ve otopark seviyesinde kullanilir.</CodeGuide>
-                <button className="inline-flex items-center justify-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" disabled={busy || !organizationForm.name.trim()} onClick={handleCreateOrganization} type="button">
-                  <Plus className="h-4 w-4" />
-                  Organizasyon olustur
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className={sectionCardClassName()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Secili organizasyon</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">{organizationHierarchy?.name || 'Bir organizasyon secin'}</h3>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <div className={`${subtlePanelClassName()} p-4`}>
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Yerleske</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{sites.length}</p>
-              </div>
-              <div className={`${subtlePanelClassName()} p-4`}>
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Bina</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{buildings.length}</p>
-              </div>
-              <div className={`${subtlePanelClassName()} p-4`}>
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Kamera</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{cameras.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <OrganizationManagement
+        organizations={organizations}
+        selectedOrganizationId={selectedOrganizationId}
+        organizationHierarchy={organizationHierarchy}
+        organizationForm={organizationForm}
+        isSuperAdmin={isSuperAdmin}
+        busy={busy}
+        sitesCount={sites.length}
+        buildingsCount={buildings.length}
+        camerasCount={cameras.length}
+        onSelectOrganization={setSelectedOrganizationId}
+        onOrganizationFormChange={setOrganizationForm}
+        onCreateOrganization={handleCreateOrganization}
+        onUpdateOrganization={(organization) => {
+          void handleUpdateOrganization(organization);
+        }}
+        onDeleteOrganization={(organizationId) => {
+          void handleDeleteOrganization(organizationId);
+        }}
+      />
     );
   }
 
   function renderOverview() {
-    const organizationSites = organizationHierarchy?.sites ?? [];
-
     return (
-      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className={sectionCardClassName()}>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Durum ozeti</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">Secili operasyon resmi</h3>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className={`${subtlePanelClassName()} p-4`}>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Secili organizasyon</p>
-              <p className="mt-2 text-lg font-semibold text-white">{organizationHierarchy?.name || 'Secim yok'}</p>
-              <p className="mt-2 text-sm text-slate-400">{organizationHierarchy?.description || 'Detay icin organizasyonlar sekmesini kullanin.'}</p>
-            </div>
-            <div className={`${subtlePanelClassName()} p-4`}>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Yonetici hesabi</p>
-              <p className="mt-2 text-lg font-semibold text-white">{profile?.fullName || 'Bilinmiyor'}</p>
-              <p className="mt-2 text-sm text-slate-400">{profile?.email || 'Oturum yok'}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className={sectionCardClassName()}>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Hizli gecis</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">Siradaki islem</h3>
-          <div className="mt-6 space-y-3">
-            {[
-              ['organizations', 'Organizasyonlar', 'Kurumsal sahiplik ve secim'],
-              ['facilities', 'Tesisler', 'Yerleske, bina ve kat yapisi'],
-              ['maps', 'Haritalar', 'Kroki surumleri ve editor'],
-              ['cameras', 'Kameralar', 'Canli izleme cihazi ve bolge baglari'],
-            ].map(([key, title, text]) => (
-              <button key={key} className={`flex w-full items-center justify-between px-4 py-4 text-left ${subtlePanelClassName()}`} onClick={() => setActiveView(key as SidebarKey)} type="button">
-                <div>
-                  <p className="text-sm font-semibold text-white">{title}</p>
-                  <p className="mt-1 text-xs text-slate-400">{text}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+      <DashboardOverview
+        organizationName={organizationHierarchy?.name}
+        organizationDescription={organizationHierarchy?.description}
+        profileName={profile?.fullName}
+        profileEmail={profile?.email}
+        onChangeView={setActiveView}
+      />
     );
 
     return (
@@ -5870,123 +5261,43 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="admin-shell min-h-screen text-slate-100">
-      <div className="flex min-h-screen">
-        <aside className="fixed inset-y-0 left-0 hidden w-[284px] border-r border-[rgba(245,243,239,0.08)] bg-[#090b0d] px-6 py-8 xl:flex xl:flex-col">
-          <div className="mb-10 space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-[#0d1013] text-[#F5F3EF]">
-                <Map className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="font-display text-[2rem] font-semibold tracking-[-0.04em] text-[#F5F3EF]">
-                  Bulocation
-                </h1>
-                <p className="mt-1 font-display text-[11px] font-bold uppercase tracking-[0.22em] text-[#8f96a3]">
-                  Enterprise Admin
-                </p>
-              </div>
-            </div>
-          </div>
+    <AdminShell
+      sidebar={
+        <AdminSidebar
+          activeView={activeView}
+          visibleSidebarItems={visibleSidebarItems}
+          profileName={profile?.fullName}
+          profileEmail={profile?.email}
+          onChangeView={setActiveView}
+          onLogout={handleLogout}
+        />
+      }
+      topbar={
+        <AdminTopbar
+          tabs={topNavTabs(activeView, activeViewLabel)}
+          onChangeView={setActiveView}
+        />
+      }
+    >
+      {error ? (
+        <div className="border border-rose-500/30 bg-rose-950/30 px-5 py-4 text-sm text-rose-200">
+          {error}
+        </div>
+      ) : null}
+      {success ? (
+        <div className="border border-emerald-500/30 bg-emerald-950/30 px-5 py-4 text-sm text-emerald-200">
+          {success}
+        </div>
+      ) : null}
 
-          <nav className="space-y-2">
-            {visibleSidebarItems.map(({ key, label, icon: Icon }) => {
-              const active = key === activeView;
-              return (
-                <button
-                  key={key}
-                  className={`flex w-full items-center gap-3 rounded-none border px-4 py-3 text-left text-sm transition ${
-                    active
-                      ? 'border-[#1836B9] bg-[#0f141c] text-[#F5F3EF]'
-                      : 'border-transparent text-[#8f96a3] hover:border-[rgba(245,243,239,0.08)] hover:bg-[#0d1013] hover:text-[#F5F3EF]'
-                  }`}
-                  onClick={() => setActiveView(key)}
-                  type="button"
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="font-medium">{label}</span>
-                  {active ? <ChevronRight className="ml-auto h-4 w-4" /> : null}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="admin-panel-card mt-auto p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-[#0d1013] text-sm font-semibold text-[#F5F3EF]">
-                {(profile?.fullName ?? 'A').slice(0, 1)}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#F5F3EF]">{profile?.fullName}</p>
-                <p className="truncate text-xs text-[#8f96a3]">{profile?.email}</p>
-              </div>
-            </div>
-            <button
-              className="admin-action mt-4 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-semibold"
-              onClick={handleLogout}
-              type="button"
-            >
-              <LogOut className="h-4 w-4" />
-              Oturumu kapat
-            </button>
-          </div>
-        </aside>
-
-        <main className="flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-6 xl:ml-[284px]">
-          <div className="mx-auto max-w-[1480px] space-y-6">
-            <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(245,243,239,0.08)] pb-5">
-              <div className="flex flex-wrap items-center gap-6">
-                <nav className="flex items-center gap-8">
-                  {topNavTabs(activeView, activeViewLabel).map((tab) => {
-                    return (
-                      <button
-                        key={`${tab.key}-${tab.label}`}
-                        className={`border-b-2 pb-1 text-sm font-semibold ${
-                          tab.active
-                            ? 'border-[#1836B9] text-[#F5F3EF]'
-                            : 'border-transparent text-[#8f96a3]'
-                        }`}
-                        onClick={() => setActiveView(tab.key)}
-                        type="button"
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="admin-action flex h-11 w-11 items-center justify-center" type="button">
-                  <Bell className="h-4 w-4" />
-                </button>
-                <button className="admin-action flex h-11 w-11 items-center justify-center" type="button">
-                  <HelpCircle className="h-4 w-4" />
-                </button>
-              </div>
-            </header>
-
-            {error ? (
-              <div className="border border-rose-500/30 bg-rose-950/30 px-5 py-4 text-sm text-rose-200">
-                {error}
-              </div>
-            ) : null}
-            {success ? (
-              <div className="border border-emerald-500/30 bg-emerald-950/30 px-5 py-4 text-sm text-emerald-200">
-                {success}
-              </div>
-            ) : null}
-
-            {activeView === 'overview' ? renderOverview() : null}
-            {activeView === 'organizations' ? renderOrganizations() : null}
-            {activeView === 'facilities' ? renderFacilities() : null}
-            {activeView === 'parking' ? renderParking() : null}
-            {activeView === 'maps' ? renderMaps() : null}
-            {activeView === 'cameras' ? renderCameras() : null}
-            {isSuperAdmin && activeView === 'users' ? renderUsers() : null}
-            {isSuperAdmin && activeView === 'security' ? renderSecurity() : null}
-          </div>
-        </main>
-      </div>
-    </div>
+      {activeView === 'overview' ? renderOverview() : null}
+      {activeView === 'organizations' ? renderOrganizations() : null}
+      {activeView === 'facilities' ? renderFacilities() : null}
+      {activeView === 'parking' ? renderParking() : null}
+      {activeView === 'maps' ? renderMaps() : null}
+      {activeView === 'cameras' ? renderCameras() : null}
+      {isSuperAdmin && activeView === 'users' ? renderUsers() : null}
+      {isSuperAdmin && activeView === 'security' ? renderSecurity() : null}
+    </AdminShell>
   );
 }
