@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import type { ParkingFacilityHierarchy } from '../shared/services/adminApi';
 import FieldShell from '../shared/components/FieldShell';
 import CodeGuide from '../shared/components/CodeGuide';
-import type { BuildingForm, ParkingFacilityForm, ParkingTab, ParkingZoneForm } from '../shared/types/admin.types';
+import type { ParkingFacilityForm, ParkingTab, ParkingZoneForm } from '../shared/types/admin.types';
 import { parkingFacilityTypeOptions } from '../shared/constants';
 import { enumLabel, inputClassName, sectionCardClassName, selectClassName } from '../shared/utils';
 
@@ -16,7 +16,10 @@ type SiteOption = {
   name: string;
 };
 
-type BuildingOption = BuildingForm & { id: string };
+type BuildingOption = {
+  id: string;
+  name: string;
+};
 
 type ParkingManagementProps = {
   parkingTab: ParkingTab;
