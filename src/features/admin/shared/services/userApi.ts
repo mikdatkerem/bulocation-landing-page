@@ -1,0 +1,26 @@
+export const userApi = {
+  getCurrentUser: (...args: Parameters<typeof import('./adminApi').adminApi.getCurrentUser>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.getCurrentUser(...args)),
+  getAdminUsers: (...args: Parameters<typeof import('./adminApi').adminApi.getAdminUsers>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.getAdminUsers(...args)),
+  searchAdminUsers: (...args: Parameters<typeof import('./adminApi').adminApi.searchAdminUsers>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.searchAdminUsers(...args)),
+  getRoles: (...args: Parameters<typeof import('./adminApi').adminApi.getRoles>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.getRoles(...args)),
+  setAdminUserStatus: (...args: Parameters<typeof import('./adminApi').adminApi.setAdminUserStatus>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.setAdminUserStatus(...args)),
+  softDeleteAdminUser: (...args: Parameters<typeof import('./adminApi').adminApi.softDeleteAdminUser>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.softDeleteAdminUser(...args)),
+  restoreAdminUser: (...args: Parameters<typeof import('./adminApi').adminApi.restoreAdminUser>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.restoreAdminUser(...args)),
+  assignRole: (...args: Parameters<typeof import('./adminApi').adminApi.assignRole>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.assignRole(...args)),
+  removeRole: (...args: Parameters<typeof import('./adminApi').adminApi.removeRole>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.removeRole(...args)),
+  getOrganizationAdmins: (...args: Parameters<typeof import('./adminApi').adminApi.getOrganizationAdmins>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.getOrganizationAdmins(...args)),
+  assignOrganizationAdmin: (...args: Parameters<typeof import('./adminApi').adminApi.assignOrganizationAdmin>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.assignOrganizationAdmin(...args)),
+  removeOrganizationAdmin: (...args: Parameters<typeof import('./adminApi').adminApi.removeOrganizationAdmin>) =>
+    import('./adminApi').then(({ adminApi }) => adminApi.removeOrganizationAdmin(...args)),
+};

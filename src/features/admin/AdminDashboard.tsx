@@ -3,7 +3,6 @@ import QRCode from 'qrcode';
 import {
   ArrowRight,
   Check,
-  ChevronRight,
   Eye,
   EyeOff,
   MousePointer2,
@@ -1485,6 +1484,9 @@ export default function AdminDashboard() {
     }, 'Kat silindi.');
   }
 
+  void handleUpdateFloor;
+  void handleDeleteFloor;
+
   async function handleCreateParkingFacility() {
     if (!session || !parkingFacilityForm.siteId) {
       return;
@@ -2703,232 +2705,6 @@ export default function AdminDashboard() {
         profileEmail={profile?.email}
         onChangeView={setActiveView}
       />
-    );
-
-    return (
-      <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-6">
-          <div className={sectionCardClassName()}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organizasyonlar</p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">Tesis konteynerleri</h3>
-              </div>
-              <div className="border border-[#2b3d5f] bg-[#0d1422] px-3 py-1 text-xs font-medium text-slate-300">
-                {organizations.length} kayit
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-              <div className="space-y-3">
-                {organizations.length === 0 ? (
-                  <div className="border border-dashed border-[#2b3d5f] bg-[#0d1422] p-5 text-sm text-slate-400">
-                    Henuz organizasyon yok. Tesis kurulumuna baslamak icin ilk organizasyonu olusturun.
-                  </div>
-                ) : (
-                  organizations.map((organization) => {
-                    const active = organization.id === selectedOrganizationId;
-                    return (
-                      <button
-                        key={organization.id}
-                        className={rowCardClassName(active)}
-                        onClick={() => setSelectedOrganizationId(organization.id)}
-                        type="button"
-                      >
-                        <p className="text-sm font-semibold">{organization.name}</p>
-                        <p className={`mt-2 text-xs leading-6 ${active ? 'text-slate-300' : 'text-slate-400'}`}>
-                          {organization.description || 'Aciklama yok'}
-                        </p>
-                        <div className="mt-3 flex gap-2">
-                          <span
-                            className={actionButtonClassName('neutral')}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleUpdateOrganization(organization);
-                            }}
-                          >
-                            Duzenle
-                          </span>
-                          <span
-                            className={actionButtonClassName('danger')}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleDeleteOrganization(organization.id);
-                            }}
-                          >
-                            Sil
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-
-              <div className={`${subtlePanelClassName()} p-5`}>
-                <p className="text-sm font-semibold text-white">Organizasyon olustur</p>
-                <div className="mt-4 space-y-3">
-                  <input
-                    className={inputClassName()}
-                    placeholder="Organizasyon adi"
-                    value={organizationForm.name}
-                    onChange={(event) =>
-                      setOrganizationForm((current) => ({ ...current, name: event.target.value }))
-                    }
-                  />
-                  <textarea
-                    className={`${inputClassName()} min-h-28 resize-y`}
-                    placeholder="Aciklama"
-                    value={organizationForm.description}
-                    onChange={(event) =>
-                      setOrganizationForm((current) => ({ ...current, description: event.target.value }))
-                    }
-                  />
-                  <button
-                    className="inline-flex items-center gap-2 border border-[#38558a] bg-[#16233a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-                    disabled={busy || !organizationForm.name.trim()}
-                    onClick={handleCreateOrganization}
-                    type="button"
-                  >
-                    Olustur
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={sectionCardClassName()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Kullanicilar</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Yonetici erisimli hesaplar</h3>
-            <div className="mt-6 space-y-3">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {user.firstName} {user.lastName}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">{user.email}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {user.roles.filter((role) => role.toLowerCase() !== 'admin').map((role) => (
-                      <span
-                        key={`${user.id}-${role}`}
-                        className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
-                      >
-                        {role}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className={sectionCardClassName()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Hiyerarsi</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">
-              {organizationHierarchy?.name || 'Bir organizasyon secin'}
-            </h3>
-            <div className="mt-6 space-y-4">
-              {organizationHierarchy ? (
-                organizationSites.length > 0 ? (
-                  organizationSites.map((site) => (
-                    <div key={site.id} className="rounded-[28px] border border-slate-200 bg-slate-50/70 p-5">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{site.name}</p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
-                            {site.code} - {enumLabel(site.siteType, siteTypeOptions)}
-                          </p>
-                        </div>
-                        <div className="text-right text-xs text-slate-500">
-                          <p>{site.buildings.length} bina</p>
-                          <p>{site.parkingFacilities.length} otopark tesisi</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex gap-2">
-                        <button className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700" onClick={() => void handleUpdateSite(site)} type="button">Duzenle</button>
-                        <button className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700" onClick={() => void handleDeleteSite(site.id)} type="button">Sil</button>
-                      </div>
-
-                      <div className="mt-4 space-y-3">
-                        {site.buildings.map((building) => (
-                          <div key={building.id} className="rounded-2xl border border-white bg-white/90 px-4 py-3">
-                            <p className="text-sm font-medium text-slate-900">{building.name}</p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {building.floors.length} kat - {enumLabel(building.buildingType, buildingTypeOptions)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
-                    Bu organizasyon var ancak henuz yerleske olusturulmamis.
-                  </div>
-                )
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
-                  Yerleske, bina ve kat yapisini incelemek icin bir organizasyon secin.
-                </div>
-              )}
-            </div>
-            {buildings.length > 0 || floors.length > 0 ? (
-              <div className="mt-6 space-y-3 rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Hizli duzenleme</p>
-                <div className="flex flex-wrap gap-2">
-                  {buildings.map((building) => (
-                    <button key={building.id} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700" onClick={() => void handleUpdateBuilding(building)} type="button">
-                      Bina duzenle: {building.code}
-                    </button>
-                  ))}
-                  {buildings.map((building) => (
-                    <button key={`${building.id}-delete`} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700" onClick={() => void handleDeleteBuilding(building.id)} type="button">
-                      Bina sil: {building.code}
-                    </button>
-                  ))}
-                  {floors.map((floor) => (
-                    <button key={floor.id} className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700" onClick={() => void handleUpdateFloor(floor)} type="button">
-                      Kat duzenle: {floor.code}
-                    </button>
-                  ))}
-                  {floors.map((floor) => (
-                    <button key={`${floor.id}-delete`} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700" onClick={() => void handleDeleteFloor(floor.id)} type="button">
-                      Kat sil: {floor.code}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-[34px] border border-slate-200/80 bg-slate-950 p-6 text-white shadow-[0_26px_70px_rgba(15,23,42,0.34)] lg:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">Guvenlik</p>
-            <h3 className="mt-2 text-2xl font-semibold">Proxy korumali yonetici trafigi</h3>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              Yonetici istekleri proxy yolu uzerinden iletilir. JWT oturum katmaninda kalir,
-              uygulama gizli anahtari ise tarayici bundle yerine proxy tarafinda tutulur.
-            </p>
-
-            <div className="mt-6 grid gap-3">
-              {roles.map((role) => (
-                <div key={role.id} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold text-white">{role.name}</p>
-                  <p className="mt-1 text-xs text-slate-300">{role.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
     );
   }
 
@@ -5301,3 +5077,4 @@ export default function AdminDashboard() {
     </AdminShell>
   );
 }
+
