@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  ArrowRight,
   Check,
   Eye,
   EyeOff,
@@ -9,7 +8,6 @@ import {
   Plus,
   RotateCcw,
   Trash2,
-  Upload,
   Waypoints,
   X,
 } from 'lucide-react';
@@ -45,9 +43,11 @@ import DashboardOverview from './dashboard/DashboardOverview';
 import OrganizationManagement from './organizations/OrganizationManagement';
 import FacilitiesManagement from './organizations/FacilitiesManagement';
 import ParkingManagement from './organizations/ParkingManagement';
+import MapUploadPanel from './maps/MapUploadPanel';
+import MapVersionPanel from './maps/MapVersionPanel';
+import MapPublishPanel from './maps/MapPublishPanel';
 import CodeGuide from './shared/components/CodeGuide';
 import FieldShell from './shared/components/FieldShell';
-import SearchableSelect from './shared/components/SearchableSelect';
 import {
   ADMIN_SESSION_STORAGE_KEY,
   allNodeTypeOptions,
@@ -100,13 +100,11 @@ import {
   nodeTypeGeneratesQr,
   parsePolygonJson,
   resolveContainedImageRect,
-  rowCardClassName,
   sectionCardClassName,
   selectClassName,
   snapToGrid,
   statusLabel,
   stringifyPolygon,
-  subtlePanelClassName,
   topNavTabs,
 } from './shared/utils';
 
@@ -2781,289 +2779,75 @@ export default function AdminDashboard() {
     return (
       <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
         <div className="space-y-6">
-          <div className={sectionCardClassName()}>
-            <p className="admin-kicker">Harita dosyasi yukleme</p>
-            <h3 className="admin-heading mt-2 text-2xl font-semibold">Kat krokisini depolamaya gonder</h3>
-            <div className="mt-6 space-y-4">
-              <FieldShell label="Dosya">
-                <input
-                  className={inputClassName()}
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.svg,.pdf"
-                  onChange={(event) => void handleUploadAsset(event.target.files?.[0] ?? null)}
-                />
-              </FieldShell>
-              {uploadedAsset ? (
-                <div className={`${subtlePanelClassName()} p-4 text-sm text-[#b5bcc7]`}>
-                  <p className="font-semibold text-white">{uploadedAsset.originalFileName}</p>
-                  <p className="mt-1">{uploadedAsset.relativePath}</p>
-                </div>
-              ) : null}
-            </div>
-          </div>
+          <MapUploadPanel
+            busy={busy}
+            uploadedAsset={uploadedAsset}
+            organizations={organizations}
+            selectedOrganizationId={selectedOrganizationId}
+            selectedMapSiteId={selectedMapSiteId}
+            selectedMapBuildingId={selectedMapBuildingId}
+            mapSites={mapSites}
+            mapBuildings={mapBuildings}
+            mapFloors={mapFloors}
+            mapVersionForm={mapVersionForm}
+            onUploadAsset={(file) => {
+              void handleUploadAsset(file);
+            }}
+            onSelectOrganization={setSelectedOrganizationId}
+            onSelectSite={setSelectedMapSiteId}
+            onSelectBuilding={setSelectedMapBuildingId}
+            onSelectFloor={(value) => {
+              setSelectedMapFloorId(value);
+              setMapVersionForm((current) => ({ ...current, floorId: value }));
+            }}
+            onMapVersionFormChange={setMapVersionForm}
+            onCreateMapVersion={handleCreateMapVersion}
+          />
 
-          <div className={sectionCardClassName()}>
-            <p className="admin-kicker">Surum olustur</p>
-            <h3 className="admin-heading mt-2 text-2xl font-semibold">Yayina hazir harita taslaklari</h3>
-            <div className="mt-6 grid gap-4">
-              <SearchableSelect
-                label="Organizasyon"
-                value={selectedOrganizationId}
-                options={organizations.map((organization) => ({
-                  value: organization.id,
-                  label: organization.name,
-                  hint: organization.description ?? 'Organizasyon',
-                }))}
-                placeholder="Organizasyon ara"
-                emptyText="Organizasyon sec"
-                onChange={(value) => setSelectedOrganizationId(value)}
-              />
-              <SearchableSelect
-                label="Yerleske"
-                value={selectedMapSiteId}
-                options={mapSites.map((site) => ({
-                  value: site.id,
-                  label: site.name,
-                  hint: site.code,
-                }))}
-                placeholder="Yerleske ara"
-                emptyText="Yerleske sec"
-                onChange={(value) => setSelectedMapSiteId(value)}
-              />
-              <SearchableSelect
-                label="Bina"
-                value={selectedMapBuildingId}
-                options={mapBuildings.map((building) => ({
-                  value: building.id,
-                  label: building.name,
-                  hint: `${building.code} · ${building.siteName}`,
-                }))}
-                placeholder="Bina ara"
-                emptyText="Bina sec"
-                onChange={(value) => setSelectedMapBuildingId(value)}
-              />
-              <SearchableSelect
-                label="Kat"
-                value={mapVersionForm.floorId}
-                options={mapFloors.map((floor) => ({
-                  value: floor.id,
-                  label: floor.name,
-                  hint: `${floor.code} · ${floor.buildingName}`,
-                }))}
-                placeholder="Kat ara"
-                emptyText="Kat sec"
-                onChange={(value) => {
-                  setSelectedMapFloorId(value);
-                  setMapVersionForm((current) => ({ ...current, floorId: value }));
-                }}
-              />
-              <FieldShell label="Surum adi">
-                <input
-                  className={inputClassName()}
-                  value={mapVersionForm.name}
-                  onChange={(event) =>
-                    setMapVersionForm((current) => ({ ...current, name: event.target.value }))
-                  }
-                />
-              </FieldShell>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FieldShell label="Genislik">
-                  <input
-                    className={inputClassName()}
-                    type="number"
-                    value={mapVersionForm.width}
-                    onChange={(event) =>
-                      setMapVersionForm((current) => ({ ...current, width: Number(event.target.value) }))
-                    }
-                  />
-                </FieldShell>
-                <FieldShell label="Yukseklik">
-                  <input
-                    className={inputClassName()}
-                    type="number"
-                    value={mapVersionForm.height}
-                    onChange={(event) =>
-                      setMapVersionForm((current) => ({ ...current, height: Number(event.target.value) }))
-                    }
-                  />
-                </FieldShell>
-              </div>
-                <button
-                  className="admin-action admin-action-accent inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
-                  disabled={busy || !uploadedAsset || !mapVersionForm.floorId || !mapVersionForm.name.trim()}
-                  onClick={handleCreateMapVersion}
-                  type="button"
-                >
-                  <Upload className="h-4 w-4" />
-                  Harita surumu olustur
-                </button>
-            </div>
-          </div>
-
-          <div className={sectionCardClassName()}>
-            <p className="admin-kicker">Harita surumleri</p>
-            <h3 className="admin-heading mt-2 text-2xl font-semibold">Taslak veya yayindaki editoru sec</h3>
-            <div className="mt-6 space-y-3">
-              {filteredMapVersions.length === 0 ? (
-                <div className="admin-panel-subtle border-dashed p-5 text-sm text-[#8f96a3]">
-                  Secili filtreler icin henuz harita surumu yok.
-                </div>
-              ) : (
-                filteredMapVersions.map((version) => {
-                  const active = version.id === selectedMapVersionId;
-                  return (
-                    <button
-                      key={version.id}
-                      className={rowCardClassName(active)}
-                      onClick={() => {
-                        setSelectedMapSiteId(version.siteId);
-                        setSelectedMapBuildingId(version.buildingId);
-                        setSelectedMapFloorId(version.floorId);
-                        setMapVersionForm((current) => ({ ...current, floorId: version.floorId }));
-                        setSelectedMapVersionId(version.id);
-                      }}
-                      type="button"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold">{version.name}</p>
-                          <p className={`mt-1 text-xs ${active ? 'text-slate-300' : 'text-slate-400'}`}>
-                            {version.floorCode} - {version.floorName}
-                          </p>
-                        </div>
-                        <span className="admin-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                          {statusLabel(version.status)}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleRenameMapVersion(version.id, version.name); }}>
-                          Yeniden adlandir
-                        </span>
-                        <span className={actionButtonClassName('accent')} onClick={(event) => { event.stopPropagation(); void handleDuplicateMapVersion(version.id, version.name); }}>
-                          Kopyala
-                        </span>
-                        <span className={actionButtonClassName('neutral')} onClick={(event) => { event.stopPropagation(); void handleArchiveMapVersion(version.id); }}>
-                          Arsivle
-                        </span>
-                        <span className={actionButtonClassName('danger')} onClick={(event) => { event.stopPropagation(); void handleDeleteMapVersion(version.id); }}>
-                          Sil
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <MapVersionPanel
+            selectedMapVersionId={selectedMapVersionId}
+            filteredMapVersions={filteredMapVersions}
+            onSelectVersion={(version) => {
+              setSelectedMapSiteId(version.siteId);
+              setSelectedMapBuildingId(version.buildingId);
+              setSelectedMapFloorId(version.floorId);
+              setMapVersionForm((current) => ({ ...current, floorId: version.floorId }));
+              setSelectedMapVersionId(version.id);
+            }}
+            onRename={(versionId, versionName) => {
+              void handleRenameMapVersion(versionId, versionName);
+            }}
+            onDuplicate={(versionId, versionName) => {
+              void handleDuplicateMapVersion(versionId, versionName);
+            }}
+            onArchive={(versionId) => {
+              void handleArchiveMapVersion(versionId);
+            }}
+            onDelete={(versionId) => {
+              void handleDeleteMapVersion(versionId);
+            }}
+          />
         </div>
 
         <div className="space-y-6">
-          <div className={sectionCardClassName()}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="admin-kicker">Harita editoru</p>
-                <h3 className="admin-heading mt-2 text-2xl font-semibold">
-                  {mapEditor ? mapEditor.name : 'Bir harita surumu sec'}
-                </h3>
-              </div>
-              {mapEditor ? (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <a
-                    className="admin-action inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold"
-                    href={selectedMapsiteFloorUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Mapsite
-                    <ArrowRight className="h-4 w-4" />
-                  </a>
-                  <button
-                    className="admin-action inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold"
-                    onClick={() => void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed')}
-                    type="button"
-                  >
-                    {copiedNodeLinkType === 'embed' ? 'Embed kopyalandi' : 'Embed link'}
-                  </button>
-                  <button
-                    className="admin-action admin-action-accent inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold disabled:opacity-60"
-                    disabled={busy}
-                    onClick={handlePublishMapVersion}
-                    type="button"
-                  >
-                    Yayinla
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            {mapEditor ? (
-              <div className="mt-6 grid gap-4 md:grid-cols-4">
-                <div className="admin-panel-subtle p-4">
-                  <p className="admin-kicker">Durum</p>
-                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">{statusLabel(mapEditor.status)}</p>
-                </div>
-                <div className="admin-panel-subtle p-4">
-                  <p className="admin-kicker">Boyut</p>
-                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">
-                    {mapEditor.width} x {mapEditor.height}
-                  </p>
-                </div>
-                <div className="admin-panel-subtle p-4">
-                  <p className="admin-kicker">Dugum</p>
-                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">{mapEditor.nodes.length}</p>
-                </div>
-                <div className="admin-panel-subtle p-4">
-                  <p className="admin-kicker">Baglanti</p>
-                  <p className="mt-2 text-lg font-semibold text-[#F5F3EF]">{mapEditor.connections.length}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="admin-panel-subtle mt-6 border-dashed p-5 text-sm text-[#8f96a3]">
-                Once bir harita surumu sec veya olustur.
-              </div>
-            )}
-
-            {renderMapPublishReadiness()}
-
-            {mapEditor ? (
-              <div className="admin-panel-subtle mt-6 p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="admin-kicker">Mapsite linkleri</p>
-                    <p className="mt-2 text-sm leading-6 text-[#8f96a3]">
-                      Yayindaki kat haritasini web sitesi veya embed yuzeyinde acmak icin kullan.
-                    </p>
-                  </div>
-                  <span className="admin-pill px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
-                    {statusLabel(mapEditor.status)}
-                  </span>
-                </div>
-                <div className="mt-4 grid gap-3">
-                  <div className="border border-[rgba(245,243,239,0.08)] bg-[#0d1013] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">Kat linki</p>
-                    <p className="mt-2 break-all font-mono text-xs leading-5 text-[#d7d2ca]">{selectedMapsiteFloorUrl}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <a className={actionButtonClassName('neutral')} href={selectedMapsiteFloorUrl} rel="noreferrer" target="_blank">Ac</a>
-                      <button className={actionButtonClassName('neutral')} onClick={() => void copyMapsiteLink(selectedMapsiteFloorUrl, 'floor')} type="button">
-                        {copiedNodeLinkType === 'floor' ? 'Kopyalandi' : 'Kopyala'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="border border-[rgba(245,243,239,0.08)] bg-[#0d1013] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">Embed linki</p>
-                    <p className="mt-2 break-all font-mono text-xs leading-5 text-[#d7d2ca]">{selectedMapsiteEmbedUrl}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <a className={actionButtonClassName('neutral')} href={selectedMapsiteEmbedUrl} rel="noreferrer" target="_blank">Ac</a>
-                      <button className={actionButtonClassName('neutral')} onClick={() => void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed-panel')} type="button">
-                        {copiedNodeLinkType === 'embed-panel' ? 'Kopyalandi' : 'Kopyala'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <MapPublishPanel
+            busy={busy}
+            mapEditor={mapEditor}
+            copiedNodeLinkType={copiedNodeLinkType}
+            selectedMapsiteFloorUrl={selectedMapsiteFloorUrl}
+            selectedMapsiteEmbedUrl={selectedMapsiteEmbedUrl}
+            readinessContent={renderMapPublishReadiness()}
+            onPublish={handlePublishMapVersion}
+            onCopyEmbedHeader={() => {
+              void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed');
+            }}
+            onCopyFloorLink={() => {
+              void copyMapsiteLink(selectedMapsiteFloorUrl, 'floor');
+            }}
+            onCopyEmbedLink={() => {
+              void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed-panel');
+            }}
+          />
 
           {mapEditor ? renderMapCanvas() : null}
 
