@@ -43,6 +43,8 @@ import AdminSidebar from './layout/AdminSidebar';
 import AdminTopbar from './layout/AdminTopbar';
 import DashboardOverview from './dashboard/DashboardOverview';
 import OrganizationManagement from './organizations/OrganizationManagement';
+import FacilitiesManagement from './organizations/FacilitiesManagement';
+import ParkingManagement from './organizations/ParkingManagement';
 import CodeGuide from './shared/components/CodeGuide';
 import FieldShell from './shared/components/FieldShell';
 import SearchableSelect from './shared/components/SearchableSelect';
