@@ -274,12 +274,11 @@ export default function AdminDashboard() {
   });
   const {
     mapEditor,
-    setMapEditor,
     mapPublishReadiness,
-    setMapPublishReadiness,
     cameraZoneMapEditor,
     transitionTargetEditor,
     setTransitionTargetEditor,
+    refreshMapVersion: refreshLoadedMapVersion,
   } = useMapEditorLoader({
     session,
     selectedMapVersionId,
@@ -732,43 +731,6 @@ export default function AdminDashboard() {
   }, [activeView, visibleSidebarItems]);
 
   useEffect(() => {
-    if (!session || !transitionForm.toMapVersionId) {
-      setTransitionTargetEditor(null);
-      return;
-    }
-
-    const activeSession = session;
-    let cancelled = false;
-
-    async function loadTransitionTargetMap() {
-      try {
-        const editor = await adminApi.getMapVersion(activeSession.accessToken, transitionForm.toMapVersionId);
-        if (!cancelled) {
-          setTransitionTargetEditor(editor);
-          setTransitionForm((current) => ({
-            ...current,
-            toNodeId:
-              current.toNodeId && editor.nodes.some((node) => node.id === current.toNodeId)
-                ? current.toNodeId
-                : editor.nodes.find((node) => transitionConnectorNodeTypes.has(node.nodeType))?.id || '',
-          }));
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setTransitionTargetEditor(null);
-          setError(getApiErrorMessage(loadError, 'Hedef kat haritası yüklenemedi.'));
-        }
-      }
-    }
-
-    void loadTransitionTargetMap();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session, transitionForm.toMapVersionId]);
-
-  useEffect(() => {
     if (
       transitionForm.toMapVersionId &&
       !transitionTargetMapVersions.some((version) => version.id === transitionForm.toMapVersionId)
@@ -791,28 +753,6 @@ export default function AdminDashboard() {
 
     const results = await adminApi.searchAdminUsers(activeSession.accessToken, search, 20);
     setUserSearchResults(results);
-  }
-
-  async function refreshMapVersion(activeSession: Session, mapVersionId = selectedMapVersionId) {
-    if (!mapVersionId) {
-      setMapEditor(null);
-      setMapPublishReadiness(null);
-      return null;
-    }
-
-    const editor = await adminApi.getMapVersion(activeSession.accessToken, mapVersionId);
-    const readiness = await loadMapPublishReadinessOrNull(activeSession, mapVersionId);
-    setMapEditor(editor);
-    setMapPublishReadiness(readiness);
-    return editor;
-  }
-
-  async function loadMapPublishReadinessOrNull(activeSession: Session, mapVersionId: string) {
-    try {
-      return await adminApi.getMapPublishReadiness(activeSession.accessToken, mapVersionId);
-    } catch {
-      return null;
-    }
   }
 
   async function runAction(action: () => Promise<void>, successMessage: string, errorMessage = 'Islem tamamlanamadi.') {
@@ -1377,7 +1317,7 @@ export default function AdminDashboard() {
       });
       await refreshHierarchy(session);
       setSelectedMapVersionId(created.id);
-      await refreshMapVersion(session, created.id);
+      await refreshLoadedMapVersion(session, created.id);
     }, 'Harita surumu olusturuldu.');
   }
 
@@ -1394,7 +1334,7 @@ export default function AdminDashboard() {
     await runAction(async () => {
       await adminApi.renameMapVersion(session.accessToken, versionId, name.trim());
       await refreshHierarchy(session);
-      await refreshMapVersion(session, versionId);
+      await refreshLoadedMapVersion(session, versionId);
     }, 'Harita surumu yeniden adlandirildi.');
   }
 
@@ -1406,7 +1346,7 @@ export default function AdminDashboard() {
     await runAction(async () => {
       await adminApi.archiveMapVersion(session.accessToken, versionId);
       await refreshHierarchy(session);
-      await refreshMapVersion(session, versionId);
+      await refreshLoadedMapVersion(session, versionId);
     }, 'Harita surumu arsivlendi.');
   }
 
@@ -1424,7 +1364,7 @@ export default function AdminDashboard() {
       const duplicated = await adminApi.duplicateMapVersion(session.accessToken, versionId, name.trim() || null);
       await refreshHierarchy(session);
       setSelectedMapVersionId(duplicated.id);
-      await refreshMapVersion(session, duplicated.id);
+      await refreshLoadedMapVersion(session, duplicated.id);
     }, 'Harita surumu kopyalandi.');
   }
 
@@ -1438,7 +1378,7 @@ export default function AdminDashboard() {
       const nextId = selectedMapVersionId === versionId ? '' : selectedMapVersionId;
       setSelectedMapVersionId(nextId);
       await refreshHierarchy(session);
-      await refreshMapVersion(session, nextId);
+      await refreshLoadedMapVersion(session, nextId);
     }, 'Harita surumu silindi.');
   }
 
@@ -1455,7 +1395,7 @@ export default function AdminDashboard() {
         pixelY: Number(nodeForm.pixelY),
         isAccessible: nodeForm.isAccessible,
       });
-      const editor = await refreshMapVersion(session);
+      const editor = await refreshLoadedMapVersion(session);
       const createdNode = editor?.nodes.find((node) => node.id === nodeId);
       if (createdNode) {
         startNodeEdit(createdNode);
@@ -1491,7 +1431,7 @@ export default function AdminDashboard() {
         pixelY: 0,
         isAccessible: true,
       });
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Harita dugumu guncellendi.');
   }
 
@@ -1505,7 +1445,7 @@ export default function AdminDashboard() {
       if (mapEditorSelection.editingNodeId === nodeId) {
         setMapEditorSelection((current) => ({ ...current, editingNodeId: '' }));
       }
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Harita dugumu silindi.');
   }
 
@@ -1523,7 +1463,7 @@ export default function AdminDashboard() {
         isAccessible: connectionForm.isAccessible,
       });
       setConnectionStartNodeId('');
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Baglanti eklendi.');
   }
 
@@ -1548,7 +1488,7 @@ export default function AdminDashboard() {
         isBidirectional: true,
         isAccessible: true,
       });
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Baglanti guncellendi.');
   }
 
@@ -1562,7 +1502,7 @@ export default function AdminDashboard() {
       if (mapEditorSelection.editingConnectionId === connectionId) {
         setMapEditorSelection((current) => ({ ...current, editingConnectionId: '' }));
       }
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Baglanti silindi.');
   }
 
@@ -1582,7 +1522,7 @@ export default function AdminDashboard() {
         isBidirectional: transitionForm.isBidirectional,
         isAccessible: transitionForm.isAccessible,
       });
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Katlar arasi gecis eklendi.', 'Kat gecisi eklenemedi.');
   }
 
@@ -1593,7 +1533,7 @@ export default function AdminDashboard() {
 
     await runAction(async () => {
       await adminApi.deleteMapTransition(session.accessToken, transitionId);
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Katlar arasi gecis silindi.');
   }
 
@@ -1740,7 +1680,7 @@ export default function AdminDashboard() {
         isAccessible: connectionForm.isAccessible,
       });
       setConnectionStartNodeId('');
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, 'Baglanti eklendi.');
   }
 
@@ -1854,7 +1794,7 @@ export default function AdminDashboard() {
     await runAction(async () => {
       await adminApi.publishMapVersion(session.accessToken, selectedMapVersionId);
       await refreshHierarchy(session);
-      await refreshMapVersion(session);
+      await refreshLoadedMapVersion(session);
     }, `Harita surumu yayina alindi. Mapsite: ${buildMapsiteFloorUrl(mapEditor?.floorId)}`);
   }
 
