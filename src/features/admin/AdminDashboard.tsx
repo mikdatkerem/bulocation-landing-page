@@ -39,8 +39,8 @@ import MapManagement from './maps/MapManagement';
 import MapPublishReadinessPanel from './maps/MapPublishReadinessPanel';
 import MapCanvas from './maps/editor/MapCanvas';
 import MapEditorSidebar from './maps/editor/MapEditorSidebar';
+import useAdminSession from './shared/hooks/useAdminSession';
 import {
-  ADMIN_SESSION_STORAGE_KEY,
   allNodeTypeOptions,
   sidebarItems,
   transitionConnectorNodeTypes,
@@ -90,7 +90,7 @@ import {
 } from './shared/utils';
 
 export default function AdminDashboard() {
-  const [session, setSession] = useState<Session | null>(null);
+  const { session, setSession, clearSession } = useAdminSession();
   const [activeView, setActiveView] = useState<SidebarKey>('organizations');
   const [facilityTab, setFacilityTab] = useState<FacilityTab>('sites');
   const [parkingTab, setParkingTab] = useState<ParkingTab>('facilities');
@@ -221,74 +221,6 @@ export default function AdminDashboard() {
   const [cameraZoneCanvasSize, setCameraZoneCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const mapCanvasRef = useRef<HTMLDivElement | null>(null);
   const cameraZoneCanvasRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function restoreStoredSession() {
-      if (typeof window === 'undefined') {
-        return;
-      }
-
-      const rawSession = window.localStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
-      if (!rawSession) {
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(rawSession) as Session;
-        const refreshExpiry = new Date(parsed.refreshTokenExpiresAt).getTime();
-        if (Number.isNaN(refreshExpiry) || refreshExpiry <= Date.now()) {
-          window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-          return;
-        }
-
-        const accessExpiry = new Date(parsed.accessTokenExpiresAt).getTime();
-        const shouldRefreshNow =
-          Number.isNaN(accessExpiry) || accessExpiry <= Date.now() + 60_000;
-
-        if (shouldRefreshNow) {
-          const refreshed = await adminApi.refreshToken(parsed.refreshToken);
-          if (cancelled) {
-            return;
-          }
-
-          setSession({
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-            accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
-            refreshTokenExpiresAt: refreshed.refreshTokenExpiresAt,
-          });
-          return;
-        }
-
-        if (!cancelled) {
-          setSession(parsed);
-        }
-      } catch {
-        window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-      }
-    }
-
-    void restoreStoredSession();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    if (!session) {
-      window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-      return;
-    }
-
-    window.localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(session));
-  }, [session]);
 
   const sites = useMemo(() => flattenSites(organizationHierarchy), [organizationHierarchy]);
   const buildings = useMemo(() => flattenBuildings(organizationHierarchy), [organizationHierarchy]);
@@ -949,46 +881,6 @@ export default function AdminDashboard() {
   }, [activeView, visibleSidebarItems]);
 
   useEffect(() => {
-    if (!session) {
-      return;
-    }
-
-    const accessExpiry = new Date(session.accessTokenExpiresAt).getTime();
-    if (Number.isNaN(accessExpiry)) {
-      return;
-    }
-
-    const refreshLeadMs = 60_000;
-    const delay = Math.max(accessExpiry - Date.now() - refreshLeadMs, 5_000);
-    let cancelled = false;
-
-    const timeout = window.setTimeout(async () => {
-      try {
-        const refreshed = await adminApi.refreshToken(session.refreshToken);
-        if (cancelled) {
-          return;
-        }
-
-        setSession({
-          accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken,
-          accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
-          refreshTokenExpiresAt: refreshed.refreshTokenExpiresAt,
-        });
-      } catch {
-        if (!cancelled) {
-          handleLogout();
-        }
-      }
-    }, delay);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-    };
-  }, [session]);
-
-  useEffect(() => {
     if (!session || !selectedOrganizationId) {
       return;
     }
@@ -1241,7 +1133,7 @@ export default function AdminDashboard() {
   }
 
   function handleLogout() {
-    setSession(null);
+    clearSession();
     setError(null);
     setLoginFieldErrors(null);
     setSuccess(null);
