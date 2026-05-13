@@ -3,7 +3,6 @@ import QRCode from 'qrcode';
 import AdminLogin from '../../admin/AdminLogin';
 import {
   adminApi,
-  type AdminUserSearchResult,
   type AdminUserListItem,
   getApiErrorMessage,
   getApiFieldErrors,
@@ -40,6 +39,7 @@ import MapPublishReadinessPanel from './maps/MapPublishReadinessPanel';
 import MapCanvas from './maps/editor/MapCanvas';
 import MapEditorSidebar from './maps/editor/MapEditorSidebar';
 import useAdminSession from './shared/hooks/useAdminSession';
+import useAdminUserManagement from './shared/hooks/useAdminUserManagement';
 import {
   allNodeTypeOptions,
   sidebarItems,
@@ -65,7 +65,6 @@ import type {
   SidebarKey,
   SiteForm,
   TransitionForm,
-  UserActionState,
 } from './shared/types/admin.types';
 import {
   buildMapsiteFloorUrl,
@@ -104,7 +103,6 @@ export default function AdminDashboard() {
   const [organizationHierarchy, setOrganizationHierarchy] = useState<OrganizationHierarchy | null>(null);
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [usersPage, setUsersPage] = useState<PagedResult<AdminUserListItem> | null>(null);
-  const [userSearchResults, setUserSearchResults] = useState<AdminUserSearchResult[]>([]);
   const [mapEditor, setMapEditor] = useState<MapVersionEditor | null>(null);
   const [mapPublishReadiness, setMapPublishReadiness] = useState<MapPublishReadiness | null>(null);
   const [cameraZoneMapEditor, setCameraZoneMapEditor] = useState<MapVersionEditor | null>(null);
@@ -188,13 +186,6 @@ export default function AdminDashboard() {
     isBidirectional: true,
     isAccessible: true,
   });
-  const [userActionState, setUserActionState] = useState<UserActionState>({
-    selectedUserId: '',
-    selectedRoleId: '',
-    userSearchTerm: '',
-    organizationSearchTerm: '',
-    selectedOrganizationAdminOrganizationId: '',
-  });
   const [mapGraphSearch, setMapGraphSearch] = useState({
     nodeListTerm: '',
     connectionListTerm: '',
@@ -261,34 +252,22 @@ export default function AdminDashboard() {
     () => roles.filter((role) => role.name.toLowerCase() !== 'admin'),
     [roles],
   );
-  const selectedRoleUser = useMemo(
-    () =>
-      userSearchResults.find((user) => user.id === userActionState.selectedUserId) ??
-      users.find((user) => user.id === userActionState.selectedUserId) ??
-      null,
-    [userActionState.selectedUserId, userSearchResults, users],
-  );
-  const organizationSearchResults = useMemo(() => {
-    const search = userActionState.organizationSearchTerm.trim().toLocaleLowerCase('tr-TR');
-    if (search.length < 2) {
-      return [] as OrganizationSummary[];
-    }
-
-    return organizations
-      .filter((organization) => {
-        const name = organization.name.toLocaleLowerCase('tr-TR');
-        const description = organization.description?.toLocaleLowerCase('tr-TR') ?? '';
-        return name.includes(search) || description.includes(search);
-      })
-      .slice(0, 12);
-  }, [organizations, userActionState.organizationSearchTerm]);
-  const selectedOrganizationAdminOrganization = useMemo(
-    () =>
-      organizations.find(
-        (organization) => organization.id === userActionState.selectedOrganizationAdminOrganizationId,
-      ) ?? null,
-    [organizations, userActionState.selectedOrganizationAdminOrganizationId],
-  );
+  const {
+    userActionState,
+    setUserActionState,
+    userSearchResults,
+    setUserSearchResults,
+    selectedRoleUser,
+    organizationSearchResults,
+    selectedOrganizationAdminOrganization,
+  } = useAdminUserManagement({
+    session,
+    isSuperAdmin,
+    organizations,
+    users,
+    assignableRoles,
+    onError: setError,
+  });
   const visibleSidebarItems = useMemo(
     () => sidebarItems.filter((item) => isSuperAdmin || (item.key !== 'users' && item.key !== 'security')),
     [isSuperAdmin],
@@ -662,52 +641,6 @@ export default function AdminDashboard() {
       cancelled = true;
     };
   }, [cameraZoneForm.mapVersionId, session]);
-
-  useEffect(() => {
-    if (assignableRoles.length === 0) {
-      return;
-    }
-
-    setUserActionState((current) => ({
-      ...current,
-      selectedRoleId: assignableRoles.some((role) => role.id === current.selectedRoleId)
-        ? current.selectedRoleId
-        : assignableRoles[0].id,
-    }));
-  }, [assignableRoles]);
-
-  useEffect(() => {
-    if (!session || !isSuperAdmin) {
-      setUserSearchResults([]);
-      return;
-    }
-
-    const search = userActionState.userSearchTerm.trim();
-    if (search.length < 2) {
-      setUserSearchResults([]);
-      return;
-    }
-
-    const activeSession = session;
-    let cancelled = false;
-    const timeout = window.setTimeout(async () => {
-      try {
-        const results = await adminApi.searchAdminUsers(activeSession.accessToken, search, 20);
-        if (!cancelled) {
-          setUserSearchResults(results);
-        }
-      } catch (searchError) {
-        if (!cancelled) {
-          setError(getApiErrorMessage(searchError, 'Kullanici aramasi yapilamadi.'));
-        }
-      }
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-    };
-  }, [isSuperAdmin, session, userActionState.userSearchTerm]);
 
   useEffect(() => {
     const referenceValue = selectedNodeReference;
