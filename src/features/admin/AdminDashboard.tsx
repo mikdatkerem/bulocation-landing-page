@@ -12,8 +12,6 @@ import {
   type FacilityMapConnection,
   type FacilityMapNode,
   type MapAsset,
-  type MapPublishReadiness,
-  type MapVersionEditor,
   type OrganizationSummary,
   type ParkingFacilityHierarchy,
   type SiteHierarchy,
@@ -36,6 +34,7 @@ import MapEditorSidebar from './maps/editor/MapEditorSidebar';
 import useAdminSession from './shared/hooks/useAdminSession';
 import useAdminUserManagement from './shared/hooks/useAdminUserManagement';
 import useAdminBootstrap from './shared/hooks/useAdminBootstrap';
+import useMapEditorLoader from './shared/hooks/useMapEditorLoader';
 import {
   allNodeTypeOptions,
   sidebarItems,
@@ -94,10 +93,6 @@ export default function AdminDashboard() {
   const [loginFieldErrors, setLoginFieldErrors] = useState<Record<string, string[]> | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
-  const [mapEditor, setMapEditor] = useState<MapVersionEditor | null>(null);
-  const [mapPublishReadiness, setMapPublishReadiness] = useState<MapPublishReadiness | null>(null);
-  const [cameraZoneMapEditor, setCameraZoneMapEditor] = useState<MapVersionEditor | null>(null);
-  const [transitionTargetEditor, setTransitionTargetEditor] = useState<MapVersionEditor | null>(null);
   const [selectedMapVersionId, setSelectedMapVersionId] = useState<string>('');
   const [selectedMapSiteId, setSelectedMapSiteId] = useState<string>('');
   const [selectedMapBuildingId, setSelectedMapBuildingId] = useState<string>('');
@@ -276,6 +271,28 @@ export default function AdminDashboard() {
     users,
     assignableRoles,
     onError: setError,
+  });
+  const {
+    mapEditor,
+    setMapEditor,
+    mapPublishReadiness,
+    setMapPublishReadiness,
+    cameraZoneMapEditor,
+    transitionTargetEditor,
+    setTransitionTargetEditor,
+  } = useMapEditorLoader({
+    session,
+    selectedMapVersionId,
+    selectedOrganizationId,
+    transitionToMapVersionId: transitionForm.toMapVersionId,
+    cameraZoneForm,
+    onError: setError,
+    setSelectedMapVersionId,
+    setSelectedMapSiteId,
+    setSelectedMapBuildingId,
+    setSelectedMapFloorId,
+    setConnectionForm,
+    setTransitionForm,
   });
   const visibleSidebarItems = useMemo(
     () => sidebarItems.filter((item) => isSuperAdmin || (item.key !== 'users' && item.key !== 'security')),
@@ -460,7 +477,6 @@ export default function AdminDashboard() {
 
     return mapVersions.filter((version) => version.floorId === selectedCamera.floorId);
   }, [mapVersions, selectedCamera]);
-
   const activeViewLabel = getViewLabel(activeView);
   const mapCanvasImageRect = useMemo(
     () =>
@@ -623,35 +639,6 @@ export default function AdminDashboard() {
   }, [cameraScopedMapVersions, cameraScopedParkingZones]);
 
   useEffect(() => {
-    if (!session || !cameraZoneForm.mapVersionId) {
-      setCameraZoneMapEditor(null);
-      return;
-    }
-
-    const activeSession = session;
-    let cancelled = false;
-
-    async function loadCameraZoneMap() {
-      try {
-        const editor = await adminApi.getMapVersion(activeSession.accessToken, cameraZoneForm.mapVersionId);
-        if (!cancelled) {
-          setCameraZoneMapEditor(editor);
-        }
-      } catch {
-        if (!cancelled) {
-          setCameraZoneMapEditor(null);
-        }
-      }
-    }
-
-    void loadCameraZoneMap();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cameraZoneForm.mapVersionId, session]);
-
-  useEffect(() => {
     const referenceValue = selectedNodeReference;
     if (
       !selectedMapNode ||
@@ -743,58 +730,6 @@ export default function AdminDashboard() {
       setActiveView('organizations');
     }
   }, [activeView, visibleSidebarItems]);
-
-  useEffect(() => {
-    setSelectedMapVersionId('');
-    setSelectedMapSiteId('');
-    setSelectedMapBuildingId('');
-    setSelectedMapFloorId('');
-  }, [selectedOrganizationId]);
-
-  useEffect(() => {
-    if (!session || !selectedMapVersionId) {
-      setMapEditor(null);
-      setMapPublishReadiness(null);
-      setTransitionTargetEditor(null);
-      return;
-    }
-
-    const activeSession = session;
-    let cancelled = false;
-
-    async function loadMapVersion() {
-      try {
-        const editor = await adminApi.getMapVersion(activeSession.accessToken, selectedMapVersionId);
-        const readiness = await loadMapPublishReadinessOrNull(activeSession, selectedMapVersionId);
-        if (!cancelled) {
-          setMapEditor(editor);
-          setMapPublishReadiness(readiness);
-          setConnectionForm((current) => ({
-            ...current,
-            fromNodeId: current.fromNodeId || editor.nodes[0]?.id || '',
-            toNodeId: current.toNodeId || editor.nodes[1]?.id || '',
-          }));
-          setTransitionForm((current) => ({
-            ...current,
-            fromNodeId:
-              current.fromNodeId && editor.nodes.some((node) => node.id === current.fromNodeId)
-                ? current.fromNodeId
-                : editor.nodes.find((node) => transitionConnectorNodeTypes.has(node.nodeType))?.id || '',
-          }));
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(getApiErrorMessage(loadError, 'Harita surumu yuklenemedi.'));
-        }
-      }
-    }
-
-    void loadMapVersion();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedMapVersionId, session]);
 
   useEffect(() => {
     if (!session || !transitionForm.toMapVersionId) {
