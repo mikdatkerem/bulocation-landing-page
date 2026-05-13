@@ -32,18 +32,16 @@ import OrganizationManagement from './organizations/OrganizationManagement';
 import FacilitiesManagement from './organizations/FacilitiesManagement';
 import ParkingManagement from './organizations/ParkingManagement';
 import CameraManagement from './cameras/CameraManagement';
+import CameraZoneCanvas from './cameras/CameraZoneCanvas';
 import UserManagement from './users/UserManagement';
 import SecurityOverview from './security/SecurityOverview';
-import MapUploadPanel from './maps/MapUploadPanel';
-import MapVersionPanel from './maps/MapVersionPanel';
-import MapPublishPanel from './maps/MapPublishPanel';
+import MapManagement from './maps/MapManagement';
 import MapPublishReadinessPanel from './maps/MapPublishReadinessPanel';
 import MapCanvas from './maps/editor/MapCanvas';
 import MapEditorSidebar from './maps/editor/MapEditorSidebar';
 import {
   ADMIN_SESSION_STORAGE_KEY,
   allNodeTypeOptions,
-  CAMERA_ZONE_GRID_SIZE,
   sidebarItems,
   transitionConnectorNodeTypes,
 } from './shared/constants';
@@ -83,7 +81,6 @@ import {
   isDraftMapStatus,
   isImageMapAsset,
   isPublishedMapStatus,
-  mapAssetUrl,
   nodeTypeGeneratesQr,
   parsePolygonJson,
   resolveContainedImageRect,
@@ -2185,133 +2182,18 @@ export default function AdminDashboard() {
   }
 
   function renderCameraZoneCanvas() {
-    if (!cameraZoneForm.mapVersionId) {
-      return (
-        <div className="admin-panel-subtle rounded-[8px] border-dashed p-5 text-sm text-[#8f96a3]">
-          Polygon cizmek icin once bir harita surumu sec.
-        </div>
-      );
-    }
-
-    if (!cameraZoneMapEditor) {
-      return (
-        <div className="admin-panel-subtle rounded-[8px] border-dashed p-5 text-sm text-[#8f96a3]">
-          Harita surumu yukleniyor.
-        </div>
-      );
-    }
-
-    if (!isImageMapAsset(cameraZoneMapEditor)) {
-      return (
-        <div className="admin-panel-subtle rounded-[8px] border-dashed p-5 text-sm text-[#8f96a3]">
-          Kamera bolgesi cizimi su anda yalnizca gorsel haritalarda destekleniyor.
-        </div>
-      );
-    }
-
-    const polygonPoints = cameraZonePoints
-      .map((point) => `${(point.x / cameraZoneMapEditor.width) * 100},${(point.y / cameraZoneMapEditor.height) * 100}`)
-      .join(' ');
-    const verticalGridLines = Array.from(
-      { length: Math.floor(cameraZoneMapEditor.width / CAMERA_ZONE_GRID_SIZE) + 1 },
-      (_, index) => index * CAMERA_ZONE_GRID_SIZE,
-    ).filter((value) => value > 0 && value < cameraZoneMapEditor.width);
-    const horizontalGridLines = Array.from(
-      { length: Math.floor(cameraZoneMapEditor.height / CAMERA_ZONE_GRID_SIZE) + 1 },
-      (_, index) => index * CAMERA_ZONE_GRID_SIZE,
-    ).filter((value) => value > 0 && value < cameraZoneMapEditor.height);
-
     return (
-      <div className="admin-map-shell">
-        <div className="admin-map-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#8f96a3]">
-          <span>Polygon editor</span>
-          <span>{CAMERA_ZONE_GRID_SIZE}px grid ile snap aktif</span>
-        </div>
-        <div
-          ref={cameraZoneCanvasRef}
-          className="relative cursor-crosshair bg-[#090b0d]"
-          onClick={handleCameraZoneCanvasClick}
-          style={{ aspectRatio: `${cameraZoneMapEditor.width} / ${cameraZoneMapEditor.height}` }}
-        >
-          <img
-            alt={cameraZoneMapEditor.name}
-            className="h-full w-full object-contain"
-            src={mapAssetUrl(cameraZoneMapEditor.assetPath)}
-          />
-          <svg
-            className="pointer-events-none absolute"
-            style={{
-              left: cameraZoneCanvasImageRect.left,
-              top: cameraZoneCanvasImageRect.top,
-              width: cameraZoneCanvasImageRect.width,
-              height: cameraZoneCanvasImageRect.height,
-            }}
-            viewBox={`0 0 ${cameraZoneMapEditor.width} ${cameraZoneMapEditor.height}`}
-            preserveAspectRatio="none"
-          >
-            {verticalGridLines.map((x) => (
-              <line
-                key={`grid-x-${x}`}
-                x1={x}
-                y1={0}
-                x2={x}
-                y2={cameraZoneMapEditor.height}
-                stroke="rgba(148,163,184,0.18)"
-                strokeWidth="1"
-              />
-            ))}
-            {horizontalGridLines.map((y) => (
-              <line
-                key={`grid-y-${y}`}
-                x1={0}
-                y1={y}
-                x2={cameraZoneMapEditor.width}
-                y2={y}
-                stroke="rgba(148,163,184,0.18)"
-                strokeWidth="1"
-              />
-            ))}
-            {cameraZonePoints.length >= 3 ? (
-              <polygon
-                fill="rgba(37,99,235,0.2)"
-                points={polygonPoints}
-                stroke="#60a5fa"
-                strokeWidth="2"
-              />
-            ) : null}
-            {cameraZonePoints.length >= 2 ? (
-              <polyline
-                fill="none"
-                points={polygonPoints}
-                stroke="#93c5fd"
-                strokeDasharray="6 4"
-                strokeWidth="2"
-              />
-            ) : null}
-          </svg>
-          {cameraZonePoints.map((point, index) => (
-            <button
-              key={`${point.x}-${point.y}-${index}`}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-blue-500 px-2 py-1 text-[10px] font-semibold text-white shadow-lg"
-              onClick={(event) => {
-                event.stopPropagation();
-                syncCameraZonePoints(cameraZonePoints.filter((_, pointIndex) => pointIndex !== index));
-              }}
-              style={{
-                left:
-                  cameraZoneCanvasImageRect.left +
-                  (point.x / cameraZoneMapEditor.width) * cameraZoneCanvasImageRect.width,
-                top:
-                  cameraZoneCanvasImageRect.top +
-                  (point.y / cameraZoneMapEditor.height) * cameraZoneCanvasImageRect.height,
-              }}
-              type="button"
-            >
-              {index + 1}
-            </button>
-          ))}
-        </div>
-      </div>
+      <CameraZoneCanvas
+        mapVersionId={cameraZoneForm.mapVersionId}
+        cameraZoneMapEditor={cameraZoneMapEditor}
+        cameraZonePoints={cameraZonePoints}
+        cameraZoneCanvasImageRect={cameraZoneCanvasImageRect}
+        cameraZoneCanvasRef={cameraZoneCanvasRef}
+        onCanvasClick={handleCameraZoneCanvasClick}
+        onRemovePoint={(pointIndex) => {
+          syncCameraZonePoints(cameraZonePoints.filter((_, currentIndex) => currentIndex !== pointIndex));
+        }}
+      />
     );
   }
 
@@ -2543,80 +2425,26 @@ export default function AdminDashboard() {
     const mapTransitions = mapEditor?.transitions ?? [];
 
     return (
-      <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-        <div className="space-y-6">
-          <MapUploadPanel
-            busy={busy}
-            uploadedAsset={uploadedAsset}
-            organizations={organizations}
-            selectedOrganizationId={selectedOrganizationId}
-            selectedMapSiteId={selectedMapSiteId}
-            selectedMapBuildingId={selectedMapBuildingId}
-            mapSites={mapSites}
-            mapBuildings={mapBuildings}
-            mapFloors={mapFloors}
-            mapVersionForm={mapVersionForm}
-            onUploadAsset={(file) => {
-              void handleUploadAsset(file);
-            }}
-            onSelectOrganization={setSelectedOrganizationId}
-            onSelectSite={setSelectedMapSiteId}
-            onSelectBuilding={setSelectedMapBuildingId}
-            onSelectFloor={(value) => {
-              setSelectedMapFloorId(value);
-              setMapVersionForm((current) => ({ ...current, floorId: value }));
-            }}
-            onMapVersionFormChange={setMapVersionForm}
-            onCreateMapVersion={handleCreateMapVersion}
-          />
-
-          <MapVersionPanel
-            selectedMapVersionId={selectedMapVersionId}
-            filteredMapVersions={filteredMapVersions}
-            onSelectVersion={(version) => {
-              setSelectedMapSiteId(version.siteId);
-              setSelectedMapBuildingId(version.buildingId);
-              setSelectedMapFloorId(version.floorId);
-              setMapVersionForm((current) => ({ ...current, floorId: version.floorId }));
-              setSelectedMapVersionId(version.id);
-            }}
-            onRename={(versionId, versionName) => {
-              void handleRenameMapVersion(versionId, versionName);
-            }}
-            onDuplicate={(versionId, versionName) => {
-              void handleDuplicateMapVersion(versionId, versionName);
-            }}
-            onArchive={(versionId) => {
-              void handleArchiveMapVersion(versionId);
-            }}
-            onDelete={(versionId) => {
-              void handleDeleteMapVersion(versionId);
-            }}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <MapPublishPanel
-            busy={busy}
-            mapEditor={mapEditor}
-            copiedNodeLinkType={copiedNodeLinkType}
-            selectedMapsiteFloorUrl={selectedMapsiteFloorUrl}
-            selectedMapsiteEmbedUrl={selectedMapsiteEmbedUrl}
-            readinessContent={renderMapPublishReadiness()}
-            onPublish={handlePublishMapVersion}
-            onCopyEmbedHeader={() => {
-              void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed');
-            }}
-            onCopyFloorLink={() => {
-              void copyMapsiteLink(selectedMapsiteFloorUrl, 'floor');
-            }}
-            onCopyEmbedLink={() => {
-              void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed-panel');
-            }}
-          />
-
-          {mapEditor ? renderMapCanvas() : null}
-
+      <MapManagement
+        busy={busy}
+        uploadedAsset={uploadedAsset}
+        organizations={organizations}
+        selectedOrganizationId={selectedOrganizationId}
+        selectedMapSiteId={selectedMapSiteId}
+        selectedMapBuildingId={selectedMapBuildingId}
+        mapSites={mapSites}
+        mapBuildings={mapBuildings}
+        mapFloors={mapFloors}
+        mapVersionForm={mapVersionForm}
+        selectedMapVersionId={selectedMapVersionId}
+        filteredMapVersions={filteredMapVersions}
+        mapEditor={mapEditor}
+        copiedNodeLinkType={copiedNodeLinkType}
+        selectedMapsiteFloorUrl={selectedMapsiteFloorUrl}
+        selectedMapsiteEmbedUrl={selectedMapsiteEmbedUrl}
+        readinessContent={renderMapPublishReadiness()}
+        canvasContent={mapEditor ? renderMapCanvas() : null}
+        editorSidebarContent={
           <MapEditorSidebar
             busy={busy}
             mapEditor={mapEditor}
@@ -2673,8 +2501,49 @@ export default function AdminDashboard() {
               void handleDeleteTransition(transitionId);
             }}
           />
-        </div>
-      </section>
+        }
+        onUploadAsset={(file) => {
+          void handleUploadAsset(file);
+        }}
+        onSelectOrganization={setSelectedOrganizationId}
+        onSelectSite={setSelectedMapSiteId}
+        onSelectBuilding={setSelectedMapBuildingId}
+        onSelectFloor={(value) => {
+          setSelectedMapFloorId(value);
+          setMapVersionForm((current) => ({ ...current, floorId: value }));
+        }}
+        onMapVersionFormChange={setMapVersionForm}
+        onCreateMapVersion={handleCreateMapVersion}
+        onSelectVersion={(version) => {
+          setSelectedMapSiteId(version.siteId);
+          setSelectedMapBuildingId(version.buildingId);
+          setSelectedMapFloorId(version.floorId);
+          setMapVersionForm((current) => ({ ...current, floorId: version.floorId }));
+          setSelectedMapVersionId(version.id);
+        }}
+        onRenameVersion={(versionId, versionName) => {
+          void handleRenameMapVersion(versionId, versionName);
+        }}
+        onDuplicateVersion={(versionId, versionName) => {
+          void handleDuplicateMapVersion(versionId, versionName);
+        }}
+        onArchiveVersion={(versionId) => {
+          void handleArchiveMapVersion(versionId);
+        }}
+        onDeleteVersion={(versionId) => {
+          void handleDeleteMapVersion(versionId);
+        }}
+        onPublish={handlePublishMapVersion}
+        onCopyEmbedHeader={() => {
+          void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed');
+        }}
+        onCopyFloorLink={() => {
+          void copyMapsiteLink(selectedMapsiteFloorUrl, 'floor');
+        }}
+        onCopyEmbedLink={() => {
+          void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed-panel');
+        }}
+      />
     );
   }
 
