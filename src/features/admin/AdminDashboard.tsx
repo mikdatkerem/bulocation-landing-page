@@ -6,7 +6,6 @@ import {
   type AdminUserListItem,
   getApiErrorMessage,
   getApiFieldErrors,
-  isApiClientError,
   type BuildingHierarchy,
   type CameraHierarchy,
   type CameraZoneHierarchy,
@@ -15,13 +14,9 @@ import {
   type MapAsset,
   type MapPublishReadiness,
   type MapVersionEditor,
-  type OrganizationHierarchy,
   type OrganizationSummary,
   type ParkingFacilityHierarchy,
-  type PagedResult,
-  type RoleDto,
   type SiteHierarchy,
-  type UserProfile,
 } from './shared/services/adminApi';
 import AdminShell from './layout/AdminShell';
 import AdminSidebar from './layout/AdminSidebar';
@@ -40,6 +35,7 @@ import MapCanvas from './maps/editor/MapCanvas';
 import MapEditorSidebar from './maps/editor/MapEditorSidebar';
 import useAdminSession from './shared/hooks/useAdminSession';
 import useAdminUserManagement from './shared/hooks/useAdminUserManagement';
+import useAdminBootstrap from './shared/hooks/useAdminBootstrap';
 import {
   allNodeTypeOptions,
   sidebarItems,
@@ -97,12 +93,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loginFieldErrors, setLoginFieldErrors] = useState<Record<string, string[]> | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
-  const [organizationHierarchy, setOrganizationHierarchy] = useState<OrganizationHierarchy | null>(null);
-  const [roles, setRoles] = useState<RoleDto[]>([]);
-  const [usersPage, setUsersPage] = useState<PagedResult<AdminUserListItem> | null>(null);
   const [mapEditor, setMapEditor] = useState<MapVersionEditor | null>(null);
   const [mapPublishReadiness, setMapPublishReadiness] = useState<MapPublishReadiness | null>(null);
   const [cameraZoneMapEditor, setCameraZoneMapEditor] = useState<MapVersionEditor | null>(null);
@@ -212,6 +203,24 @@ export default function AdminDashboard() {
   const [cameraZoneCanvasSize, setCameraZoneCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const mapCanvasRef = useRef<HTMLDivElement | null>(null);
   const cameraZoneCanvasRef = useRef<HTMLDivElement | null>(null);
+
+  const {
+    profile,
+    organizations,
+    setOrganizations,
+    organizationHierarchy,
+    roles,
+    usersPage,
+    refreshUsers,
+    refreshHierarchy,
+  } = useAdminBootstrap({
+    session,
+    selectedOrganizationId,
+    setSelectedOrganizationId,
+    onBusyChange: setBusy,
+    onError: setError,
+    onInvalidSession: handleLogout,
+  });
 
   const sites = useMemo(() => flattenSites(organizationHierarchy), [organizationHierarchy]);
   const buildings = useMemo(() => flattenBuildings(organizationHierarchy), [organizationHierarchy]);
@@ -730,116 +739,10 @@ export default function AdminDashboard() {
   }, [mapEditor, selectedMapIsPublished]);
 
   useEffect(() => {
-    if (!session) {
-      setProfile(null);
-      setOrganizations([]);
-      setOrganizationHierarchy(null);
-      setRoles([]);
-      setUsersPage(null);
-      setUserSearchResults([]);
-      setMapEditor(null);
-      return;
-    }
-
-    const activeSession = session;
-    let cancelled = false;
-
-    async function loadDashboard() {
-      try {
-        setBusy(true);
-        setError(null);
-
-        const [currentUser, organizationsResponse] = await Promise.all([
-          adminApi.getCurrentUser(activeSession.accessToken),
-          adminApi.getOrganizations(activeSession.accessToken),
-        ]);
-        const currentUserIsSuperAdmin = currentUser.roles.some((role) => role.toLowerCase() === 'superadmin');
-        const [rolesResponse, usersResponse] = currentUserIsSuperAdmin
-          ? await Promise.all([
-              adminApi.getRoles(activeSession.accessToken),
-              adminApi.getAdminUsers(activeSession.accessToken),
-            ])
-          : [[], null] satisfies [RoleDto[], PagedResult<AdminUserListItem> | null];
-
-        if (cancelled) {
-          return;
-        }
-
-        setProfile(currentUser);
-        setOrganizations(organizationsResponse);
-        setRoles(rolesResponse);
-        setUsersPage(usersResponse);
-
-        const nextOrganizationId = selectedOrganizationId || organizationsResponse[0]?.id || '';
-        setSelectedOrganizationId(nextOrganizationId);
-
-        if (nextOrganizationId) {
-          const hierarchy = await adminApi.getOrganizationHierarchy(activeSession.accessToken, nextOrganizationId);
-          if (!cancelled) {
-            setOrganizationHierarchy(hierarchy);
-          }
-        } else {
-          setOrganizationHierarchy(null);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          const message = getApiErrorMessage(loadError, 'Yonetim paneli yuklenemedi.');
-          setError(message);
-
-          if (
-            isApiClientError(loadError) &&
-            (loadError.status === 401 || loadError.status === 403 || loadError.code === 'invalid_token')
-          ) {
-            handleLogout();
-          }
-        }
-      } finally {
-        if (!cancelled) {
-          setBusy(false);
-        }
-      }
-    }
-
-    void loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedOrganizationId, session]);
-
-  useEffect(() => {
     if (!visibleSidebarItems.some((item) => item.key === activeView)) {
       setActiveView('organizations');
     }
   }, [activeView, visibleSidebarItems]);
-
-  useEffect(() => {
-    if (!session || !selectedOrganizationId) {
-      return;
-    }
-
-    const activeSession = session;
-    let cancelled = false;
-
-    async function loadHierarchy() {
-      try {
-        const hierarchy = await adminApi.getOrganizationHierarchy(activeSession.accessToken, selectedOrganizationId);
-        if (!cancelled) {
-          setOrganizationHierarchy(hierarchy);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(getApiErrorMessage(loadError, 'Organizasyon hiyerarsisi yuklenemedi.'));
-        }
-      }
-    }
-
-    void loadHierarchy();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedOrganizationId, session]);
 
   useEffect(() => {
     setSelectedMapVersionId('');
@@ -944,16 +847,6 @@ export default function AdminDashboard() {
     }
   }, [transitionForm.toMapVersionId, transitionTargetMapVersions]);
 
-  async function refreshUsers(activeSession: Session) {
-    if (!isSuperAdmin) {
-      setUsersPage(null);
-      return;
-    }
-
-    const nextUsersPage = await adminApi.getAdminUsers(activeSession.accessToken);
-    setUsersPage(nextUsersPage);
-  }
-
   async function refreshUserSearchResults(activeSession: Session) {
     const search = userActionState.userSearchTerm.trim();
     if (!isSuperAdmin || search.length < 2) {
@@ -963,16 +856,6 @@ export default function AdminDashboard() {
 
     const results = await adminApi.searchAdminUsers(activeSession.accessToken, search, 20);
     setUserSearchResults(results);
-  }
-
-  async function refreshHierarchy(activeSession: Session, organizationId = selectedOrganizationId) {
-    if (!organizationId) {
-      setOrganizationHierarchy(null);
-      return;
-    }
-
-    const hierarchy = await adminApi.getOrganizationHierarchy(activeSession.accessToken, organizationId);
-    setOrganizationHierarchy(hierarchy);
   }
 
   async function refreshMapVersion(activeSession: Session, mapVersionId = selectedMapVersionId) {
