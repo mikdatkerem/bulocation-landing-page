@@ -17,11 +17,22 @@ Local development can keep using the Vite proxy:
 
 ```env
 VITE_ADMIN_API_TARGET=http://localhost:5011
+VITE_ADMIN_API_BASE_URL=/admin-api
+VITE_ADMIN_MAP_ASSET_BASE_URL=/admin-map-assets
 ADMIN_APP_SECRET=...
 ```
 
-Production should call the API domain directly so Cloudflare does not need
-`/admin-api` or `/admin-map-assets` application routes:
+For the current Cloudflare Tunnel setup, run the production build behind the
+local proxy server. This keeps admin API calls same-origin and avoids browser
+CORS/preflight requests to `api.bulocation.com`:
+
+```bash
+npm run build
+npm run serve:prod
+```
+
+Static hosting environments can still call the API domain directly if
+Cloudflare is configured to allow API preflight requests:
 
 ```env
 VITE_ADMIN_API_BASE_URL=https://api.bulocation.com
