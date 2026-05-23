@@ -334,7 +334,16 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string): str
   }
 }
 
-const API_BASE = '/admin-api';
+function normalizeBaseUrl(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return '/admin-api';
+  }
+
+  return trimmed.replace(/\/$/, '');
+}
+
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_ADMIN_API_BASE_URL);
 
 async function request<T>(
   path: string,

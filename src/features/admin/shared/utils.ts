@@ -152,6 +152,15 @@ export function actionButtonClassName(tone: 'neutral' | 'danger' | 'accent' = 'n
 
 export function mapAssetUrl(assetPath: string) {
   const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  const configuredAssetBase = env?.VITE_ADMIN_MAP_ASSET_BASE_URL?.trim();
+  const configuredApiBase = env?.VITE_ADMIN_API_BASE_URL?.trim();
+  const remoteBase = (configuredAssetBase || configuredApiBase)?.replace(/\/$/, '');
+
+  if (remoteBase) {
+    return `${remoteBase}${normalizedPath}`;
+  }
+
   return normalizedPath.replace(/^\/storage\/maps/, '/admin-map-assets');
 }
 

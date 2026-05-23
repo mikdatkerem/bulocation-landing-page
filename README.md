@@ -11,6 +11,24 @@ Currently, two official plugins are available:
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
+## Bulocation Runtime Configuration
+
+Local development can keep using the Vite proxy:
+
+```env
+VITE_ADMIN_API_TARGET=http://localhost:5011
+ADMIN_APP_SECRET=...
+```
+
+Production should call the API domain directly so Cloudflare does not need
+`/admin-api` or `/admin-map-assets` application routes:
+
+```env
+VITE_ADMIN_API_BASE_URL=https://api.bulocation.com
+VITE_ADMIN_MAP_ASSET_BASE_URL=https://api.bulocation.com
+VITE_MAPSITE_BASE_URL=https://bulocation.com
+```
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:

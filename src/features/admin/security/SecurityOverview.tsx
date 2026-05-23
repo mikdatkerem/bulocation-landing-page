@@ -16,8 +16,9 @@ export default function SecurityOverview({ profile, roles }: SecurityOverviewPro
           <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
             <p className="text-sm font-semibold text-white">Proxy tarafindan eklenen uygulama gizli anahtari</p>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              Yonetim paneli `/admin-api` yolunu cagirir ve proxy katmani `x-app-secret` ekler. Tarayici bundle&apos;i
-              uygulama gizli anahtarini hicbir zaman icermez.
+              Canli ortamda yonetim paneli API&apos;yi `api.bulocation.com` uzerinden JWT ile cagirir. Lokal
+              gelistirmede `/admin-api` proxy yolu kullanilabilir; tarayici bundle&apos;i uygulama gizli anahtarini
+              hicbir zaman icermez.
             </p>
           </div>
           <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
