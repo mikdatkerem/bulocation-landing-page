@@ -151,17 +151,41 @@ export function actionButtonClassName(tone: 'neutral' | 'danger' | 'accent' = 'n
 }
 
 export function mapAssetUrl(assetPath: string) {
-  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  const trimmedPath = assetPath.trim();
+  if (!trimmedPath) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(trimmedPath)) {
+    return trimmedPath;
+  }
+
+  const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
   const configuredAssetBase = env?.VITE_ADMIN_MAP_ASSET_BASE_URL?.trim();
   const configuredApiBase = env?.VITE_ADMIN_API_BASE_URL?.trim();
   const remoteBase = (configuredAssetBase || configuredApiBase)?.replace(/\/$/, '');
 
   if (remoteBase) {
-    return `${remoteBase}${normalizedPath}`;
+    const assetRelativePath = normalizedPath
+      .replace(/^\/storage\/maps\/?/, '/')
+      .replace(/^\/admin-map-assets\/?/, '/');
+    const remoteBasePath = getUrlPathname(remoteBase);
+    const shouldUseAssetRelativePath =
+      remoteBasePath.endsWith('/admin-map-assets') || remoteBasePath.endsWith('/storage/maps');
+
+    return `${remoteBase}${shouldUseAssetRelativePath ? assetRelativePath : normalizedPath}`;
   }
 
   return normalizedPath.replace(/^\/storage\/maps/, '/admin-map-assets');
+}
+
+function getUrlPathname(value: string) {
+  try {
+    return new URL(value).pathname.replace(/\/$/, '');
+  } catch {
+    return value.startsWith('/') ? value.replace(/\/$/, '') : `/${value.replace(/\/$/, '')}`;
+  }
 }
 
 export function isImageMapAsset(editor: Pick<MapVersionEditor, 'assetContentType'> | null | undefined) {
