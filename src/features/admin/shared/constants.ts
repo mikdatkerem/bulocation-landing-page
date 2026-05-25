@@ -51,14 +51,14 @@ export const parkingFacilityTypeOptions: Option[] = [
 
 export const allNodeTypeOptions: Option[] = [
   { value: 1, label: 'Yol Noktasi' },
-  { value: 3, label: 'Giris' },
-  { value: 4, label: 'Cikis' },
+  { value: 3, label: 'Bina Girisi' },
+  { value: 4, label: 'Bina Cikisi' },
   { value: 5, label: 'Asansor' },
   { value: 6, label: 'Merdiven' },
   { value: 7, label: 'Rampa' },
   { value: 8, label: 'Park Yeri' },
-  { value: 9, label: 'Otopark Girisi' },
-  { value: 10, label: 'Otopark Cikisi' },
+  { value: 9, label: 'Otopark Arac Girisi' },
+  { value: 10, label: 'Otopark Arac Cikisi' },
   { value: 11, label: 'Kisitli Alan Cizgisi' },
 ];
 
