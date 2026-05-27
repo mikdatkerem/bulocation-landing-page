@@ -20,7 +20,7 @@ export default function Hero() {
           <h1 className="font-display text-[4.4rem] font-extrabold uppercase leading-[0.84] tracking-[-0.075em] text-[#f5f3ef] sm:text-8xl lg:text-[7.4rem]">
             {t('hero.title.line1')}
             <br />
-            <span className="landing-text-glow text-[#1836B9]">{t('hero.title.line2')}</span>
+            <span className="landing-text-glow text-[#6366F1]">{t('hero.title.line2')}</span>
           </h1>
 
           <p className="mx-auto mt-8 max-w-3xl text-lg font-light leading-8 text-[#c5c5d6] md:text-2xl">

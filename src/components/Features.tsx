@@ -73,7 +73,7 @@ export default function Features() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-20 flex flex-col justify-between gap-8 md:flex-row md:items-end">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#bac3ff]">{t('sectors.eyebrow')}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#c4b5fd]">{t('sectors.eyebrow')}</p>
               <h2 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.055em] text-[#f5f3ef] md:text-6xl">
                 {t('sectors.title')}
               </h2>
@@ -97,7 +97,7 @@ export default function Features() {
                 <div className="absolute inset-0 bg-[#060708]/52" />
                 <div className="absolute inset-x-0 bottom-0 h-2/3 bg-[#060708]/62" />
                 <div className="absolute bottom-10 left-10 max-w-xl">
-                  <span className="rounded-lg bg-[#1836B9]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#bac3ff]">
+                  <span className="rounded-lg bg-[#6366F1]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#c4b5fd]">
                     {t(sector.tagKey)}
                   </span>
                   <h3 className="mt-5 font-display text-4xl font-extrabold tracking-[-0.045em] text-[#f5f3ef]">
@@ -121,7 +121,7 @@ export default function Features() {
                   key={feature.titleKey}
                   className="group rounded-xl bg-[#121315] p-10 transition-colors duration-300 hover:bg-[#1f2021]"
                 >
-                  <Icon className="h-9 w-9 text-[#1836B9]" />
+                  <Icon className="h-9 w-9 text-[#6366F1]" />
                   <h3 className="mt-8 font-display text-2xl font-extrabold tracking-[-0.04em] text-[#f5f3ef]">
                     {t(feature.titleKey)}
                   </h3>
@@ -130,9 +130,9 @@ export default function Features() {
                     {feature.metaKeys.map((item) => (
                       <div
                         key={item}
-                        className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/42 transition-colors group-hover:text-[#bac3ff]"
+                        className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/42 transition-colors group-hover:text-[#c4b5fd]"
                       >
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#bac3ff]" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#c4b5fd]" />
                         {t(item)}
                       </div>
                     ))}

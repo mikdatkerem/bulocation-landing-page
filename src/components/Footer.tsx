@@ -13,14 +13,14 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-8">
-          <a className="transition-colors hover:text-[#1836B9]" href="/hizmetlerimiz">
+          <a className="transition-colors hover:text-[#6366F1]" href="/hizmetlerimiz">
             {t('footer.services')}
           </a>
-          <a className="transition-colors hover:text-[#1836B9]" href="/#about">
+          <a className="transition-colors hover:text-[#6366F1]" href="/#about">
             {t('footer.about')}
           </a>
           <a
-            className="flex items-center gap-2 text-[#c5c5d6] transition-colors hover:text-[#1836B9]"
+            className="flex items-center gap-2 text-[#c5c5d6] transition-colors hover:text-[#6366F1]"
             href="https://www.linkedin.com/in/mikdatkeremkalkan"
             rel="noopener noreferrer"
             target="_blank"

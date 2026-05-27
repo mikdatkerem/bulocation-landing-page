@@ -5,9 +5,9 @@
   --font-sans: 'Manrope', sans-serif;
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
-  --color-blue-600: #3B82F6;
-  --color-blue-100: #85ADFF;
-  --color-blue-50: #DBEAFE;
+  --color-blue-600: #6366F1;
+  --color-blue-100: #C4B5FD;
+  --color-blue-50: #EDE9FE;
 }
 
 :root {
@@ -15,7 +15,7 @@
   --bulocation-surface: #0d1013;
   --bulocation-surface-soft: #15191d;
   --bulocation-white: #F5F3EF;
-  --bulocation-primary: #1836B9;
+  --bulocation-primary: #6366F1;
   --bulocation-secondary: #4B18B9;
   --bulocation-accent: #9B18B9;
 }
@@ -73,7 +73,7 @@
   }
 
   .landing-text-glow {
-    text-shadow: 0 0 26px rgba(24, 54, 185, 0.42);
+    text-shadow: 0 0 26px rgba(99, 102, 241, 0.42);
   }
 
   .landing-signal {
@@ -235,9 +235,9 @@
   }
 
   .admin-shell .admin-input:focus {
-    border-color: rgba(24, 54, 185, 0.85);
+    border-color: rgba(99, 102, 241, 0.85);
     background: rgba(12, 15, 19, 0.98);
-    box-shadow: 0 0 0 3px rgba(24, 54, 185, 0.16);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
     outline: none;
   }
 
@@ -254,15 +254,15 @@
   }
 
   .admin-shell .admin-action-accent {
-    border-color: #3f5cff;
-    background: #1836b9;
+    border-color: #818cf8;
+    background: #6366f1;
     color: #f5f3ef;
-    box-shadow: 0 10px 24px rgba(24, 54, 185, 0.24);
+    box-shadow: 0 10px 24px rgba(99, 102, 241, 0.24);
   }
 
   .admin-shell .admin-action-accent:hover {
-    border-color: #6f86ff;
-    background: #2144d8;
+    border-color: #c4b5fd;
+    background: #4f46e5;
   }
 
   .admin-shell .admin-action:disabled,
@@ -321,8 +321,8 @@
   }
 
   .admin-shell .admin-map-tool-active {
-    border-color: #3f5cff;
-    background: rgba(24, 54, 185, 0.22);
+    border-color: #818cf8;
+    background: rgba(99, 102, 241, 0.22);
     color: #f5f3ef;
   }
 
@@ -381,7 +381,7 @@
   }
 
   .admin-login-kicker {
-    color: #a4b1ff;
+    color: #c4b5fd;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.24em;
@@ -406,8 +406,8 @@
     position: absolute;
     inset: 0 0 auto;
     height: 3px;
-    background: linear-gradient(90deg, #121315 0%, #101527 16%, #14236c 36%, #1836b9 66%, #182b93 84%, #111735 100%);
-    box-shadow: 0 0 14px rgba(24, 54, 185, 0.42);
+    background: linear-gradient(90deg, #121315 0%, #17132b 16%, #312e81 36%, #6366f1 66%, #4f46e5 84%, #1f1b3d 100%);
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.42);
   }
 
   .admin-login-mode-button {
@@ -429,9 +429,9 @@
   }
 
   .admin-login-mode-button.is-active {
-    border-color: #1836b9;
-    background: #1836b9;
-    color: #dbe3ff;
+    border-color: #6366f1;
+    background: #6366f1;
+    color: #ede9fe;
   }
 
   .admin-login-form {
@@ -466,9 +466,9 @@
   }
 
   .admin-login-input:focus {
-    border-color: #1836b9;
+    border-color: #6366f1;
     background: #343536;
-    box-shadow: 0 0 0 3px rgba(24, 54, 185, 0.16);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
   }
 
   .admin-login-input.has-error {
@@ -514,15 +514,15 @@
     width: 100%;
     border-radius: 7px;
     border: 1px solid transparent;
-    background: #1836b9;
+    background: #6366f1;
     padding: 12px 16px;
-    color: #dbe3ff;
+    color: #ede9fe;
     font-weight: 700;
     transition: background-color 150ms ease, opacity 150ms ease;
   }
 
   .admin-login-submit:hover:not(:disabled) {
-    background: #1735b8;
+    background: #4f46e5;
   }
 
   .admin-login-submit:disabled {

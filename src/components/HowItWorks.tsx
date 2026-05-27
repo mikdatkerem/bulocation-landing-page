@@ -14,7 +14,7 @@ export default function HowItWorks() {
     <section className="bg-[#060708] px-6 py-32 lg:px-10" id="how-it-works">
       <div className="mx-auto max-w-7xl">
         <div className="mb-24 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#bac3ff]">{t('flow.eyebrow')}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#c4b5fd]">{t('flow.eyebrow')}</p>
           <h2 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.055em] text-[#f5f3ef] md:text-6xl">
             {t('flow.title')}
           </h2>

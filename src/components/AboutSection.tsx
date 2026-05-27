@@ -14,7 +14,7 @@ export default function AboutSection() {
     <section className="bg-[#060708] px-6 py-32 lg:px-10" id="about">
       <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
         <div className="lg:sticky lg:top-28">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#bac3ff]">{t('about.eyebrow')}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#c4b5fd]">{t('about.eyebrow')}</p>
           <h2 className="mt-5 max-w-xl font-display text-5xl font-extrabold leading-[0.92] tracking-[-0.06em] text-[#f5f3ef] md:text-6xl">
             {t('about.title')}
           </h2>
@@ -29,7 +29,7 @@ export default function AboutSection() {
           {pillars.map((pillar) => (
             <article key={pillar.id} className="rounded-xl bg-[#121315] p-9">
               <div className="flex items-start gap-8">
-                <span className="font-display text-sm font-extrabold text-[#1836B9]">0{pillar.id}</span>
+                <span className="font-display text-sm font-extrabold text-[#6366F1]">0{pillar.id}</span>
                 <div>
                   <h3 className="font-display text-2xl font-extrabold tracking-[-0.04em] text-[#f5f3ef]">
                     {t(pillar.titleKey)}

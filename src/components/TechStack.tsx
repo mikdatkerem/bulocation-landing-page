@@ -10,12 +10,12 @@ export default function TechStack() {
         <h2 className="font-display text-6xl font-extrabold uppercase leading-[0.88] tracking-[-0.07em] text-[#f5f3ef] md:text-8xl">
           {t('cta.title.line1')}
           <br />
-          <span className="landing-text-glow text-[#1836B9]">{t('cta.title.line2')}</span>
+          <span className="landing-text-glow text-[#6366F1]">{t('cta.title.line2')}</span>
         </h2>
         <p className="mx-auto mt-9 max-w-2xl text-xl font-light leading-8 text-[#c5c5d6]">{t('cta.desc')}</p>
         <div className="mt-12 flex justify-center">
           <a
-            className="group inline-flex items-center gap-4 rounded-lg bg-[#1836B9] px-12 py-6 font-display text-sm font-extrabold uppercase tracking-[0.22em] text-[#f5f3ef] transition-transform hover:-translate-y-1"
+            className="group inline-flex items-center gap-4 rounded-lg bg-[#6366F1] px-12 py-6 font-display text-sm font-extrabold uppercase tracking-[0.22em] text-[#f5f3ef] transition-transform hover:-translate-y-1 hover:bg-[#4F46E5]"
             href="mailto:hello@bulocation.com"
           >
             {t('cta.primary')}

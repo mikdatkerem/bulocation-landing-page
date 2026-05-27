@@ -17,11 +17,11 @@ export default function TopBar({ active = 'home' }: TopBarProps) {
   return (
     <header className="fixed left-0 top-0 z-40 w-full overflow-hidden bg-[#060708]/80 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-10">
-        <a className="relative block h-20 w-64 overflow-visible md:w-72" href="/">
+        <a className="relative flex h-20 w-44 items-center md:w-56" href="/">
           <img
             alt="BuLocation"
-            className="absolute left-0 top-1/2 h-48 w-auto max-w-none -translate-y-1/2 object-contain md:h-52"
-            src="/logo_removed_bg.png"
+            className="h-12 w-auto object-contain md:h-14"
+            src="/logo3d.png"
           />
         </a>
 
