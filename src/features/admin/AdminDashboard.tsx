@@ -16,21 +16,10 @@ import {
   type ParkingFacilityHierarchy,
   type SiteHierarchy,
 } from './shared/services/adminApi';
+import AdminDashboardContent from './AdminDashboardContent';
 import AdminShell from './layout/AdminShell';
 import AdminSidebar from './layout/AdminSidebar';
 import AdminTopbar from './layout/AdminTopbar';
-import DashboardOverview from './dashboard/DashboardOverview';
-import OrganizationManagement from './organizations/OrganizationManagement';
-import FacilitiesManagement from './organizations/FacilitiesManagement';
-import ParkingManagement from './organizations/ParkingManagement';
-import CameraManagement from './cameras/CameraManagement';
-import CameraZoneCanvas from './cameras/CameraZoneCanvas';
-import UserManagement from './users/UserManagement';
-import SecurityOverview from './security/SecurityOverview';
-import MapManagement from './maps/MapManagement';
-import MapPublishReadinessPanel from './maps/MapPublishReadinessPanel';
-import MapCanvas from './maps/editor/MapCanvas';
-import MapEditorSidebar from './maps/editor/MapEditorSidebar';
 import useAdminSession from './shared/hooks/useAdminSession';
 import useAdminUserManagement from './shared/hooks/useAdminUserManagement';
 import useAdminBootstrap from './shared/hooks/useAdminBootstrap';
@@ -1684,38 +1673,6 @@ export default function AdminDashboard() {
     }, 'Baglanti eklendi.');
   }
 
-  function renderMapCanvas() {
-    if (!mapEditor) {
-      return null;
-    }
-    return (
-      <MapCanvas
-        mapEditor={mapEditor}
-        selectedMapCanEdit={selectedMapCanEdit}
-        mapEditorTool={mapEditorTool}
-        mapEditorSelection={mapEditorSelection}
-        connectionStartNodeId={connectionStartNodeId}
-        connectionStartNode={connectionStartNode}
-        nodeQrDataUrls={nodeQrDataUrls}
-        hiddenNodeIds={hiddenNodeIds}
-        mapCanvasImageRect={mapCanvasImageRect}
-        mapCanvasRef={mapCanvasRef}
-        onCanvasClick={handleMapCanvasClick}
-        onToolSelect={(tool) => {
-          setMapEditorTool(tool);
-          setMapEditorSelection({ editingNodeId: '', editingConnectionId: '' });
-          if (tool !== 'connection') {
-            setConnectionStartNodeId('');
-          }
-        }}
-        onNodeClick={(node) => {
-          void handleMapNodeClick(node);
-        }}
-        onToggleNodeVisibility={toggleNodeVisibility}
-      />
-    );
-  }
-
   function syncCameraZonePoints(points: PolygonPoint[]) {
     setCameraZonePoints(points);
     setCameraZoneForm((current) => ({
@@ -1764,22 +1721,6 @@ export default function AdminDashboard() {
     syncCameraZonePoints([...cameraZonePoints, { x, y }]);
   }
 
-  function renderCameraZoneCanvas() {
-    return (
-      <CameraZoneCanvas
-        mapVersionId={cameraZoneForm.mapVersionId}
-        cameraZoneMapEditor={cameraZoneMapEditor}
-        cameraZonePoints={cameraZonePoints}
-        cameraZoneCanvasImageRect={cameraZoneCanvasImageRect}
-        cameraZoneCanvasRef={cameraZoneCanvasRef}
-        onCanvasClick={handleCameraZoneCanvasClick}
-        onRemovePoint={(pointIndex) => {
-          syncCameraZonePoints(cameraZonePoints.filter((_, currentIndex) => currentIndex !== pointIndex));
-        }}
-      />
-    );
-  }
-
   async function handlePublishMapVersion() {
     if (!session || !selectedMapVersionId) {
       return;
@@ -1808,13 +1749,6 @@ export default function AdminDashboard() {
     window.setTimeout(() => {
       setCopiedNodeLinkType((current) => (current === type ? '' : current));
     }, 1800);
-  }
-
-  function renderMapPublishReadiness() {
-    if (!mapEditor) {
-      return null;
-    }
-    return <MapPublishReadinessPanel mapPublishReadiness={mapPublishReadiness} />;
   }
 
   async function handleToggleUserStatus(user: AdminUserListItem) {
@@ -1899,307 +1833,6 @@ export default function AdminDashboard() {
     }, `${selectedRoleUser?.email ?? 'Kullanici'} ${organizationName} icin sirket admini yapildi.`);
   }
 
-  function renderOrganizations() {
-    return (
-      <OrganizationManagement
-        organizations={organizations}
-        selectedOrganizationId={selectedOrganizationId}
-        organizationHierarchy={organizationHierarchy}
-        organizationForm={organizationForm}
-        isSuperAdmin={isSuperAdmin}
-        busy={busy}
-        sitesCount={sites.length}
-        buildingsCount={buildings.length}
-        camerasCount={cameras.length}
-        onSelectOrganization={setSelectedOrganizationId}
-        onOrganizationFormChange={setOrganizationForm}
-        onCreateOrganization={handleCreateOrganization}
-        onUpdateOrganization={(organization) => {
-          void handleUpdateOrganization(organization);
-        }}
-        onDeleteOrganization={(organizationId) => {
-          void handleDeleteOrganization(organizationId);
-        }}
-      />
-    );
-  }
-
-  function renderOverview() {
-    return (
-      <DashboardOverview
-        organizationName={organizationHierarchy?.name}
-        organizationDescription={organizationHierarchy?.description}
-        profileName={profile?.fullName}
-        profileEmail={profile?.email}
-        onChangeView={setActiveView}
-      />
-    );
-  }
-
-  function renderFacilities() {
-    return (
-      <FacilitiesManagement
-        facilityTab={facilityTab}
-        organizations={organizations}
-        selectedOrganizationId={selectedOrganizationId}
-        siteForm={siteForm}
-        buildingForm={buildingForm}
-        floorForm={floorForm}
-        sites={sites}
-        buildings={buildings}
-        busy={busy}
-        onChangeFacilityTab={setFacilityTab}
-        onSelectOrganization={setSelectedOrganizationId}
-        onSiteFormChange={setSiteForm}
-        onBuildingFormChange={setBuildingForm}
-        onFloorFormChange={setFloorForm}
-        onCreateSite={handleCreateSite}
-        onCreateBuilding={handleCreateBuilding}
-        onCreateFloor={handleCreateFloor}
-        onUpdateSite={(site) => {
-          void handleUpdateSite(site);
-        }}
-        onDeleteSite={(siteId) => {
-          void handleDeleteSite(siteId);
-        }}
-        onUpdateBuilding={(building) => {
-          void handleUpdateBuilding(building);
-        }}
-        onDeleteBuilding={(buildingId) => {
-          void handleDeleteBuilding(buildingId);
-        }}
-      />
-    );
-  }
-
-  function renderParking() {
-    return (
-      <ParkingManagement
-        parkingTab={parkingTab}
-        parkingFacilityForm={parkingFacilityForm}
-        parkingZoneForm={parkingZoneForm}
-        parkingFacilities={parkingFacilities}
-        sites={sites}
-        buildings={buildings}
-        floors={floors}
-        busy={busy}
-        onChangeParkingTab={setParkingTab}
-        onParkingFacilityFormChange={setParkingFacilityForm}
-        onParkingZoneFormChange={setParkingZoneForm}
-        onCreateParkingFacility={handleCreateParkingFacility}
-        onCreateParkingZone={handleCreateParkingZone}
-        onUpdateParkingFacility={(facility) => {
-          void handleUpdateParkingFacility(facility);
-        }}
-        onDeleteParkingFacility={(facilityId) => {
-          void handleDeleteParkingFacility(facilityId);
-        }}
-        onUpdateParkingZone={(zone) => {
-          void handleUpdateParkingZone(zone);
-        }}
-        onDeleteParkingZone={(zoneId) => {
-          void handleDeleteParkingZone(zoneId);
-        }}
-      />
-    );
-  }
-
-  function renderMaps() {
-    const mapTransitions = mapEditor?.transitions ?? [];
-
-    return (
-      <MapManagement
-        busy={busy}
-        uploadedAsset={uploadedAsset}
-        organizations={organizations}
-        selectedOrganizationId={selectedOrganizationId}
-        selectedMapSiteId={selectedMapSiteId}
-        selectedMapBuildingId={selectedMapBuildingId}
-        mapSites={mapSites}
-        mapBuildings={mapBuildings}
-        mapFloors={mapFloors}
-        mapVersionForm={mapVersionForm}
-        selectedMapVersionId={selectedMapVersionId}
-        filteredMapVersions={filteredMapVersions}
-        mapEditor={mapEditor}
-        copiedNodeLinkType={copiedNodeLinkType}
-        selectedMapsiteFloorUrl={selectedMapsiteFloorUrl}
-        selectedMapsiteEmbedUrl={selectedMapsiteEmbedUrl}
-        readinessContent={renderMapPublishReadiness()}
-        canvasContent={mapEditor ? renderMapCanvas() : null}
-        editorSidebarContent={
-          <MapEditorSidebar
-            busy={busy}
-            mapEditor={mapEditor}
-            selectedMapVersionId={selectedMapVersionId}
-            selectedMapCanEdit={selectedMapCanEdit}
-            selectedMapIsPublished={selectedMapIsPublished}
-            isParkingSpotNode={isParkingSpotNode}
-            selectedMapNode={selectedMapNode}
-            selectedNodeQrDataUrl={selectedNodeQrDataUrl}
-            selectedNodeMapsiteUrl={selectedNodeMapsiteUrl}
-            copiedNodeLinkType={copiedNodeLinkType}
-            connectionStartNode={connectionStartNode}
-            mapEditorSelection={mapEditorSelection}
-            nodeForm={nodeForm}
-            connectionForm={connectionForm}
-            transitionForm={transitionForm}
-            mapEditorTool={mapEditorTool}
-            mapGraphSearch={mapGraphSearch}
-            filteredFromNodes={filteredFromNodes}
-            filteredToNodes={filteredToNodes}
-            filteredMapNodes={filteredMapNodes}
-            filteredMapConnections={filteredMapConnections}
-            transitionSourceNodes={transitionSourceNodes}
-            transitionTargetNodes={transitionTargetNodes}
-            transitionTargetEditor={transitionTargetEditor}
-            transitionTargetMapVersions={transitionTargetMapVersions}
-            mapTransitions={mapTransitions}
-            mapVersionById={mapVersionById}
-            onNodeFormChange={setNodeForm}
-            onConnectionFormChange={setConnectionForm}
-            onTransitionFormChange={setTransitionForm}
-            onMapEditorToolChange={setMapEditorTool}
-            onMapGraphSearchChange={setMapGraphSearch}
-            onDuplicateMapVersion={() => {
-              if (mapEditor) {
-                void handleDuplicateMapVersion(mapEditor.id, mapEditor.name);
-              }
-            }}
-            onSaveNode={mapEditorSelection.editingNodeId ? handleUpdateNode : handleAddNode}
-            onSaveConnection={mapEditorSelection.editingConnectionId ? handleUpdateConnection : handleAddConnection}
-            onSaveTransition={handleAddTransition}
-            onCopyNodeMapsiteLink={() => {
-              void copyMapsiteLink(selectedNodeMapsiteUrl, 'node-mapsite');
-            }}
-            onStartNodeEdit={startNodeEdit}
-            onDeleteNode={(nodeId) => {
-              void handleDeleteNode(nodeId);
-            }}
-            onStartConnectionEdit={startConnectionEdit}
-            onDeleteConnection={(connectionId) => {
-              void handleDeleteConnection(connectionId);
-            }}
-            onDeleteTransition={(transitionId) => {
-              void handleDeleteTransition(transitionId);
-            }}
-          />
-        }
-        onUploadAsset={(file) => {
-          void handleUploadAsset(file);
-        }}
-        onSelectOrganization={setSelectedOrganizationId}
-        onSelectSite={setSelectedMapSiteId}
-        onSelectBuilding={setSelectedMapBuildingId}
-        onSelectFloor={(value) => {
-          setSelectedMapFloorId(value);
-          setMapVersionForm((current) => ({ ...current, floorId: value }));
-        }}
-        onMapVersionFormChange={setMapVersionForm}
-        onCreateMapVersion={handleCreateMapVersion}
-        onSelectVersion={(version) => {
-          setSelectedMapSiteId(version.siteId);
-          setSelectedMapBuildingId(version.buildingId);
-          setSelectedMapFloorId(version.floorId);
-          setMapVersionForm((current) => ({ ...current, floorId: version.floorId }));
-          setSelectedMapVersionId(version.id);
-        }}
-        onRenameVersion={(versionId, versionName) => {
-          void handleRenameMapVersion(versionId, versionName);
-        }}
-        onDuplicateVersion={(versionId, versionName) => {
-          void handleDuplicateMapVersion(versionId, versionName);
-        }}
-        onArchiveVersion={(versionId) => {
-          void handleArchiveMapVersion(versionId);
-        }}
-        onDeleteVersion={(versionId) => {
-          void handleDeleteMapVersion(versionId);
-        }}
-        onPublish={handlePublishMapVersion}
-        onCopyEmbedHeader={() => {
-          void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed');
-        }}
-        onCopyFloorLink={() => {
-          void copyMapsiteLink(selectedMapsiteFloorUrl, 'floor');
-        }}
-        onCopyEmbedLink={() => {
-          void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed-panel');
-        }}
-      />
-    );
-  }
-
-  function renderCameras() {
-    return (
-      <CameraManagement
-        busy={busy}
-        editingCameraId={editingCameraId}
-        editingCameraZoneId={editingCameraZoneId}
-        cameraForm={cameraForm}
-        cameraZoneForm={cameraZoneForm}
-        cameraZonePoints={cameraZonePoints}
-        sites={sites}
-        buildings={buildings}
-        floors={floors}
-        parkingFacilities={parkingFacilities}
-        cameras={cameras}
-        cameraScopedParkingZones={cameraScopedParkingZones}
-        cameraScopedMapVersions={cameraScopedMapVersions}
-        cameraZoneCanvas={renderCameraZoneCanvas()}
-        onCameraFormChange={setCameraForm}
-        onCameraZoneFormChange={setCameraZoneForm}
-        onSyncCameraZonePoints={syncCameraZonePoints}
-        onSaveCamera={handleSaveCamera}
-        onResetCameraForm={resetCameraForm}
-        onCreateCameraZone={handleCreateCameraZone}
-        onResetCameraZoneForm={resetCameraZoneForm}
-        onStartCameraEdit={startCameraEdit}
-        onDeleteCamera={(cameraId) => {
-          void handleDeleteCamera(cameraId);
-        }}
-        onStartCameraZoneEdit={startCameraZoneEdit}
-        onDeleteCameraZone={(zoneId) => {
-          void handleDeleteCameraZone(zoneId);
-        }}
-      />
-    );
-  }
-
-  function renderUsers() {
-    return (
-      <UserManagement
-        busy={busy}
-        usersPage={usersPage}
-        users={users}
-        userSearchResults={userSearchResults}
-        selectedRoleUser={selectedRoleUser}
-        organizationSearchResults={organizationSearchResults}
-        selectedOrganizationAdminOrganization={selectedOrganizationAdminOrganization}
-        userActionState={userActionState}
-        assignableRoles={assignableRoles}
-        onUserActionStateChange={(updater) => {
-          setUserActionState((current) => updater(current));
-        }}
-        onToggleUserStatus={(user) => {
-          void handleToggleUserStatus(user);
-        }}
-        onDeleteOrRestoreUser={(user) => {
-          void handleDeleteOrRestoreUser(user);
-        }}
-        onAssignOrganizationAdmin={handleAssignOrganizationAdmin}
-        onAssignRole={handleAssignRole}
-        onRemoveRole={handleRemoveRole}
-      />
-    );
-  }
-
-  function renderSecurity() {
-    return (
-      <SecurityOverview profile={profile} roles={roles} />
-    );
-  }
-
   if (!session) {
     return (
       <AdminLogin
@@ -2245,14 +1878,309 @@ export default function AdminDashboard() {
         </div>
       ) : null}
 
-      {activeView === 'overview' ? renderOverview() : null}
-      {activeView === 'organizations' ? renderOrganizations() : null}
-      {activeView === 'facilities' ? renderFacilities() : null}
-      {activeView === 'parking' ? renderParking() : null}
-      {activeView === 'maps' ? renderMaps() : null}
-      {activeView === 'cameras' ? renderCameras() : null}
-      {isSuperAdmin && activeView === 'users' ? renderUsers() : null}
-      {isSuperAdmin && activeView === 'security' ? renderSecurity() : null}
+      <AdminDashboardContent
+        activeView={activeView}
+        isSuperAdmin={isSuperAdmin}
+        overview={{
+          organizationName: organizationHierarchy?.name,
+          organizationDescription: organizationHierarchy?.description,
+          profileName: profile?.fullName,
+          profileEmail: profile?.email,
+          onChangeView: setActiveView,
+        }}
+        organizations={{
+          organizations,
+          selectedOrganizationId,
+          organizationHierarchy,
+          organizationForm,
+          isSuperAdmin,
+          busy,
+          sitesCount: sites.length,
+          buildingsCount: buildings.length,
+          camerasCount: cameras.length,
+          onSelectOrganization: setSelectedOrganizationId,
+          onOrganizationFormChange: setOrganizationForm,
+          onCreateOrganization: handleCreateOrganization,
+          onUpdateOrganization: (organization) => {
+            void handleUpdateOrganization(organization);
+          },
+          onDeleteOrganization: (organizationId) => {
+            void handleDeleteOrganization(organizationId);
+          },
+        }}
+        facilities={{
+          facilityTab,
+          organizations,
+          selectedOrganizationId,
+          siteForm,
+          buildingForm,
+          floorForm,
+          sites,
+          buildings,
+          busy,
+          onChangeFacilityTab: setFacilityTab,
+          onSelectOrganization: setSelectedOrganizationId,
+          onSiteFormChange: setSiteForm,
+          onBuildingFormChange: setBuildingForm,
+          onFloorFormChange: setFloorForm,
+          onCreateSite: handleCreateSite,
+          onCreateBuilding: handleCreateBuilding,
+          onCreateFloor: handleCreateFloor,
+          onUpdateSite: (site) => {
+            void handleUpdateSite(site);
+          },
+          onDeleteSite: (siteId) => {
+            void handleDeleteSite(siteId);
+          },
+          onUpdateBuilding: (building) => {
+            void handleUpdateBuilding(building);
+          },
+          onDeleteBuilding: (buildingId) => {
+            void handleDeleteBuilding(buildingId);
+          },
+        }}
+        parking={{
+          parkingTab,
+          parkingFacilityForm,
+          parkingZoneForm,
+          parkingFacilities,
+          sites,
+          buildings,
+          floors,
+          busy,
+          onChangeParkingTab: setParkingTab,
+          onParkingFacilityFormChange: setParkingFacilityForm,
+          onParkingZoneFormChange: setParkingZoneForm,
+          onCreateParkingFacility: handleCreateParkingFacility,
+          onCreateParkingZone: handleCreateParkingZone,
+          onUpdateParkingFacility: (facility) => {
+            void handleUpdateParkingFacility(facility);
+          },
+          onDeleteParkingFacility: (facilityId) => {
+            void handleDeleteParkingFacility(facilityId);
+          },
+          onUpdateParkingZone: (zone) => {
+            void handleUpdateParkingZone(zone);
+          },
+          onDeleteParkingZone: (zoneId) => {
+            void handleDeleteParkingZone(zoneId);
+          },
+        }}
+        maps={{
+          management: {
+            busy,
+            uploadedAsset,
+            organizations,
+            selectedOrganizationId,
+            selectedMapSiteId,
+            selectedMapBuildingId,
+            mapSites,
+            mapBuildings,
+            mapFloors,
+            mapVersionForm,
+            selectedMapVersionId,
+            filteredMapVersions,
+            mapEditor,
+            copiedNodeLinkType,
+            selectedMapsiteFloorUrl,
+            selectedMapsiteEmbedUrl,
+            onUploadAsset: (file) => {
+              void handleUploadAsset(file);
+            },
+            onSelectOrganization: setSelectedOrganizationId,
+            onSelectSite: setSelectedMapSiteId,
+            onSelectBuilding: setSelectedMapBuildingId,
+            onSelectFloor: (value) => {
+              setSelectedMapFloorId(value);
+              setMapVersionForm((current) => ({ ...current, floorId: value }));
+            },
+            onMapVersionFormChange: setMapVersionForm,
+            onCreateMapVersion: handleCreateMapVersion,
+            onSelectVersion: (version) => {
+              setSelectedMapSiteId(version.siteId);
+              setSelectedMapBuildingId(version.buildingId);
+              setSelectedMapFloorId(version.floorId);
+              setMapVersionForm((current) => ({ ...current, floorId: version.floorId }));
+              setSelectedMapVersionId(version.id);
+            },
+            onRenameVersion: (versionId, versionName) => {
+              void handleRenameMapVersion(versionId, versionName);
+            },
+            onDuplicateVersion: (versionId, versionName) => {
+              void handleDuplicateMapVersion(versionId, versionName);
+            },
+            onArchiveVersion: (versionId) => {
+              void handleArchiveMapVersion(versionId);
+            },
+            onDeleteVersion: (versionId) => {
+              void handleDeleteMapVersion(versionId);
+            },
+            onPublish: handlePublishMapVersion,
+            onCopyEmbedHeader: () => {
+              void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed');
+            },
+            onCopyFloorLink: () => {
+              void copyMapsiteLink(selectedMapsiteFloorUrl, 'floor');
+            },
+            onCopyEmbedLink: () => {
+              void copyMapsiteLink(selectedMapsiteEmbedUrl, 'embed-panel');
+            },
+          },
+          publishReadiness: mapPublishReadiness,
+          canvas: mapEditor
+            ? {
+                mapEditor,
+                selectedMapCanEdit,
+                mapEditorTool,
+                mapEditorSelection,
+                connectionStartNodeId,
+                connectionStartNode,
+                nodeQrDataUrls,
+                hiddenNodeIds,
+                mapCanvasImageRect,
+                mapCanvasRef,
+                onCanvasClick: handleMapCanvasClick,
+                onToolSelect: (tool) => {
+                  setMapEditorTool(tool);
+                  setMapEditorSelection({ editingNodeId: '', editingConnectionId: '' });
+                  if (tool !== 'connection') {
+                    setConnectionStartNodeId('');
+                  }
+                },
+                onNodeClick: (node) => {
+                  void handleMapNodeClick(node);
+                },
+                onToggleNodeVisibility: toggleNodeVisibility,
+              }
+            : null,
+          sidebar: {
+            busy,
+            mapEditor,
+            selectedMapVersionId,
+            selectedMapCanEdit,
+            selectedMapIsPublished,
+            isParkingSpotNode,
+            selectedMapNode,
+            selectedNodeQrDataUrl,
+            selectedNodeMapsiteUrl,
+            copiedNodeLinkType,
+            connectionStartNode,
+            mapEditorSelection,
+            nodeForm,
+            connectionForm,
+            transitionForm,
+            mapEditorTool,
+            mapGraphSearch,
+            filteredFromNodes,
+            filteredToNodes,
+            filteredMapNodes,
+            filteredMapConnections,
+            transitionSourceNodes,
+            transitionTargetNodes,
+            transitionTargetEditor,
+            transitionTargetMapVersions,
+            mapTransitions: mapEditor?.transitions ?? [],
+            mapVersionById,
+            onNodeFormChange: setNodeForm,
+            onConnectionFormChange: setConnectionForm,
+            onTransitionFormChange: setTransitionForm,
+            onMapEditorToolChange: setMapEditorTool,
+            onMapGraphSearchChange: setMapGraphSearch,
+            onDuplicateMapVersion: () => {
+              if (mapEditor) {
+                void handleDuplicateMapVersion(mapEditor.id, mapEditor.name);
+              }
+            },
+            onSaveNode: mapEditorSelection.editingNodeId ? handleUpdateNode : handleAddNode,
+            onSaveConnection: mapEditorSelection.editingConnectionId ? handleUpdateConnection : handleAddConnection,
+            onSaveTransition: handleAddTransition,
+            onCopyNodeMapsiteLink: () => {
+              void copyMapsiteLink(selectedNodeMapsiteUrl, 'node-mapsite');
+            },
+            onStartNodeEdit: startNodeEdit,
+            onDeleteNode: (nodeId) => {
+              void handleDeleteNode(nodeId);
+            },
+            onStartConnectionEdit: startConnectionEdit,
+            onDeleteConnection: (connectionId) => {
+              void handleDeleteConnection(connectionId);
+            },
+            onDeleteTransition: (transitionId) => {
+              void handleDeleteTransition(transitionId);
+            },
+          },
+        }}
+        cameras={{
+          management: {
+            busy,
+            editingCameraId,
+            editingCameraZoneId,
+            cameraForm,
+            cameraZoneForm,
+            cameraZonePoints,
+            sites,
+            buildings,
+            floors,
+            parkingFacilities,
+            cameras,
+            cameraScopedParkingZones,
+            cameraScopedMapVersions,
+            onCameraFormChange: setCameraForm,
+            onCameraZoneFormChange: setCameraZoneForm,
+            onSyncCameraZonePoints: syncCameraZonePoints,
+            onSaveCamera: handleSaveCamera,
+            onResetCameraForm: resetCameraForm,
+            onCreateCameraZone: handleCreateCameraZone,
+            onResetCameraZoneForm: resetCameraZoneForm,
+            onStartCameraEdit: startCameraEdit,
+            onDeleteCamera: (cameraId) => {
+              void handleDeleteCamera(cameraId);
+            },
+            onStartCameraZoneEdit: startCameraZoneEdit,
+            onDeleteCameraZone: (zoneId) => {
+              void handleDeleteCameraZone(zoneId);
+            },
+          },
+          canvas: {
+            mapVersionId: cameraZoneForm.mapVersionId,
+            cameraZoneMapEditor,
+            cameraZonePoints,
+            cameraZoneCanvasImageRect,
+            cameraZoneCanvasRef,
+            onCanvasClick: handleCameraZoneCanvasClick,
+            onRemovePoint: (pointIndex) => {
+              syncCameraZonePoints(cameraZonePoints.filter((_, currentIndex) => currentIndex !== pointIndex));
+            },
+          },
+        }}
+        users={{
+          busy,
+          usersPage,
+          users,
+          userSearchResults,
+          selectedRoleUser,
+          organizationSearchResults,
+          selectedOrganizationAdminOrganization,
+          userActionState,
+          assignableRoles,
+          onUserActionStateChange: (updater) => {
+            setUserActionState((current) => updater(current));
+          },
+          onToggleUserStatus: (user) => {
+            void handleToggleUserStatus(user);
+          },
+          onDeleteOrRestoreUser: (user) => {
+            void handleDeleteOrRestoreUser(user);
+          },
+          onAssignOrganizationAdmin: handleAssignOrganizationAdmin,
+          onAssignRole: handleAssignRole,
+          onRemoveRole: handleRemoveRole,
+        }}
+        security={{
+          profile,
+          roles,
+        }}
+      />
     </AdminShell>
   );
 }
