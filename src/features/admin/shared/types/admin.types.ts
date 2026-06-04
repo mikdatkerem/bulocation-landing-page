@@ -23,6 +23,11 @@ export type SearchOption = {
   hint?: string;
 };
 
+export type OrganizationForm = {
+  name: string;
+  description: string;
+};
+
 export type SiteForm = {
   code: string;
   name: string;
