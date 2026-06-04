@@ -6,8 +6,6 @@ import {
   type AdminUserListItem,
   getApiErrorMessage,
   getApiFieldErrors,
-  type CameraHierarchy,
-  type CameraZoneHierarchy,
   type FacilityMapConnection,
   type FacilityMapNode,
   type MapAsset,
@@ -17,6 +15,7 @@ import AdminShell from './layout/AdminShell';
 import AdminSidebar from './layout/AdminSidebar';
 import AdminTopbar from './layout/AdminTopbar';
 import useAdminSession from './shared/hooks/useAdminSession';
+import useAdminCameraActions from './shared/hooks/useAdminCameraActions';
 import useAdminFacilityActions from './shared/hooks/useAdminFacilityActions';
 import useAdminUserManagement from './shared/hooks/useAdminUserManagement';
 import useAdminBootstrap from './shared/hooks/useAdminBootstrap';
@@ -63,10 +62,7 @@ import {
   isImageMapAsset,
   isPublishedMapStatus,
   nodeTypeGeneratesQr,
-  parsePolygonJson,
   resolveContainedImageRect,
-  snapToGrid,
-  stringifyPolygon,
   topNavTabs,
 } from './shared/utils';
 
@@ -795,6 +791,40 @@ export default function AdminDashboard() {
     runAction,
   });
 
+  const {
+    startCameraEdit,
+    resetCameraForm,
+    handleSaveCamera,
+    handleDeleteCamera,
+    syncCameraZonePoints,
+    handleCreateCameraZone,
+    startCameraZoneEdit,
+    resetCameraZoneForm,
+    handleDeleteCameraZone,
+    handleCameraZoneCanvasClick,
+  } = useAdminCameraActions({
+    session,
+    editingCameraId,
+    editingCameraZoneId,
+    cameraForm,
+    cameraZoneForm,
+    cameraZonePoints,
+    sites,
+    buildings,
+    floors,
+    parkingFacilities,
+    cameras,
+    mapVersions,
+    cameraZoneMapEditor,
+    setEditingCameraId,
+    setEditingCameraZoneId,
+    setCameraForm,
+    setCameraZoneForm,
+    setCameraZonePoints,
+    refreshHierarchy,
+    runAction,
+  });
+
   async function handleLogin(emailOrUserName: string, password: string) {
     try {
       setBusy(true);
@@ -864,145 +894,6 @@ export default function AdminDashboard() {
     setError(null);
     setLoginFieldErrors(null);
     setSuccess(null);
-  }
-
-  function startCameraEdit(camera: CameraHierarchy & { siteId: string }) {
-    setEditingCameraId(camera.id);
-    setCameraForm({
-      siteId: camera.siteId,
-      buildingId: camera.buildingId ?? '',
-      floorId: camera.floorId ?? '',
-      parkingFacilityId: camera.parkingFacilityId ?? '',
-      name: camera.name,
-      ipAddress: camera.ipAddress,
-      streamUrl: camera.streamUrl,
-      notes: camera.notes ?? '',
-    });
-  }
-
-  function resetCameraForm() {
-    setEditingCameraId('');
-    setCameraForm({
-      siteId: sites[0]?.id || '',
-      buildingId: buildings[0]?.id || '',
-      floorId: floors[0]?.id || '',
-      parkingFacilityId: parkingFacilities[0]?.id || '',
-      name: '',
-      ipAddress: '',
-      streamUrl: '',
-      notes: '',
-    });
-  }
-
-  async function handleSaveCamera() {
-    if (!session || !cameraForm.siteId || !cameraForm.name.trim() || !cameraForm.ipAddress.trim() || !cameraForm.streamUrl.trim()) {
-      return;
-    }
-
-    await runAction(async () => {
-      if (editingCameraId) {
-        const camera = cameras.find((item) => item.id === editingCameraId);
-        await adminApi.updateCamera(session.accessToken, editingCameraId, {
-          siteId: cameraForm.siteId,
-          buildingId: cameraForm.buildingId || null,
-          floorId: cameraForm.floorId || null,
-          parkingFacilityId: cameraForm.parkingFacilityId || null,
-          name: cameraForm.name.trim(),
-          ipAddress: cameraForm.ipAddress.trim(),
-          streamUrl: cameraForm.streamUrl.trim(),
-          notes: cameraForm.notes.trim() || null,
-          isActive: camera?.isActive ?? true,
-        });
-      } else {
-        await adminApi.createCamera(session.accessToken, cameraForm.siteId, {
-          buildingId: cameraForm.buildingId || null,
-          floorId: cameraForm.floorId || null,
-          parkingFacilityId: cameraForm.parkingFacilityId || null,
-          name: cameraForm.name.trim(),
-          ipAddress: cameraForm.ipAddress.trim(),
-          streamUrl: cameraForm.streamUrl.trim(),
-          notes: cameraForm.notes.trim() || null,
-        });
-      }
-
-      resetCameraForm();
-      await refreshHierarchy(session);
-    }, editingCameraId ? 'Kamera guncellendi.' : 'Kamera olusturuldu.');
-  }
-
-  async function handleDeleteCamera(cameraId: string) {
-    if (!session || !window.confirm('Bu kamerayi silmek istediginize emin misiniz?')) {
-      return;
-    }
-
-    await runAction(async () => {
-      await adminApi.deleteCamera(session.accessToken, cameraId);
-      await refreshHierarchy(session);
-    }, 'Kamera silindi.');
-  }
-
-  async function handleCreateCameraZone() {
-    if (!session || !cameraZoneForm.cameraId || cameraZonePoints.length < 3) {
-      return;
-    }
-
-    await runAction(async () => {
-      const payload = {
-        parkingZoneId: cameraZoneForm.parkingZoneId || null,
-        mapVersionId: cameraZoneForm.mapVersionId || null,
-        name: cameraZoneForm.name.trim(),
-        detectionThreshold: cameraZoneForm.detectionThreshold,
-        polygonJson: stringifyPolygon(cameraZonePoints),
-      };
-
-      if (editingCameraZoneId) {
-        await adminApi.updateCameraZone(session.accessToken, editingCameraZoneId, payload);
-      } else {
-        await adminApi.createCameraZone(session.accessToken, cameraZoneForm.cameraId, payload);
-      }
-
-      resetCameraZoneForm();
-      await refreshHierarchy(session);
-    }, editingCameraZoneId ? 'Kamera bolgesi guncellendi.' : 'Kamera bolgesi olusturuldu.');
-  }
-
-  function startCameraZoneEdit(zone: CameraZoneHierarchy, cameraId: string) {
-    const points = parsePolygonJson(zone.polygonJson);
-    setEditingCameraZoneId(zone.id);
-    setCameraZonePoints(points);
-    setCameraZoneForm({
-      cameraId,
-      parkingZoneId: zone.parkingZoneId ?? '',
-      mapVersionId: zone.mapVersionId ?? '',
-      name: zone.name,
-      detectionThreshold: zone.detectionThreshold,
-      polygonJson: stringifyPolygon(points),
-    });
-  }
-
-  function resetCameraZoneForm() {
-    const nextPoints: PolygonPoint[] = [];
-    setEditingCameraZoneId('');
-    setCameraZonePoints(nextPoints);
-    setCameraZoneForm({
-      cameraId: cameras[0]?.id || '',
-      parkingZoneId: parkingFacilities[0]?.zones[0]?.id || '',
-      mapVersionId: mapVersions[0]?.id || '',
-      name: '',
-      detectionThreshold: 0.8,
-      polygonJson: stringifyPolygon(nextPoints),
-    });
-  }
-
-  async function handleDeleteCameraZone(cameraZoneId: string) {
-    if (!session || !window.confirm('Bu kamera bolgesini silmek istediginize emin misiniz?')) {
-      return;
-    }
-
-    await runAction(async () => {
-      await adminApi.deleteCameraZone(session.accessToken, cameraZoneId);
-      await refreshHierarchy(session);
-    }, 'Kamera bolgesi silindi.');
   }
 
   async function handleUploadAsset(file: File | null) {
@@ -1404,52 +1295,11 @@ export default function AdminDashboard() {
     }, 'Baglanti eklendi.');
   }
 
-  function syncCameraZonePoints(points: PolygonPoint[]) {
-    setCameraZonePoints(points);
-    setCameraZoneForm((current) => ({
-      ...current,
-      polygonJson: stringifyPolygon(points),
-    }));
-  }
-
   function toggleNodeVisibility(nodeId: string) {
     setHiddenNodeIds((current) => ({
       ...current,
       [nodeId]: !current[nodeId],
     }));
-  }
-
-  function handleCameraZoneCanvasClick(event: React.MouseEvent<HTMLDivElement>) {
-    if (!cameraZoneMapEditor || !isImageMapAsset(cameraZoneMapEditor)) {
-      return;
-    }
-
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const imageRect = resolveContainedImageRect(
-      bounds.width,
-      bounds.height,
-      cameraZoneMapEditor.width,
-      cameraZoneMapEditor.height,
-    );
-    const relativeX = event.clientX - bounds.left;
-    const relativeY = event.clientY - bounds.top;
-
-    const insideImage =
-      relativeX >= imageRect.left &&
-      relativeX <= imageRect.left + imageRect.width &&
-      relativeY >= imageRect.top &&
-      relativeY <= imageRect.top + imageRect.height;
-
-    if (!insideImage) {
-      return;
-    }
-
-    const rawX = Math.round(((relativeX - imageRect.left) / imageRect.width) * cameraZoneMapEditor.width);
-    const rawY = Math.round(((relativeY - imageRect.top) / imageRect.height) * cameraZoneMapEditor.height);
-    const x = snapToGrid(rawX, cameraZoneMapEditor.width);
-    const y = snapToGrid(rawY, cameraZoneMapEditor.height);
-
-    syncCameraZonePoints([...cameraZonePoints, { x, y }]);
   }
 
   async function handlePublishMapVersion() {
