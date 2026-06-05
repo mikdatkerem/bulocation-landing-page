@@ -2,10 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import AdminLogin from '../../admin/AdminLogin';
 import {
-  adminApi,
-  type AdminUserListItem,
   getApiErrorMessage,
-  getApiFieldErrors,
   type FacilityMapConnection,
   type FacilityMapNode,
   type MapAsset,
@@ -15,10 +12,12 @@ import AdminShell from './layout/AdminShell';
 import AdminSidebar from './layout/AdminSidebar';
 import AdminTopbar from './layout/AdminTopbar';
 import useAdminSession from './shared/hooks/useAdminSession';
+import useAdminAuthActions from './shared/hooks/useAdminAuthActions';
 import useAdminCameraActions from './shared/hooks/useAdminCameraActions';
 import useAdminFacilityActions from './shared/hooks/useAdminFacilityActions';
 import useAdminMapActions from './shared/hooks/useAdminMapActions';
 import useAdminMapVersionActions from './shared/hooks/useAdminMapVersionActions';
+import useAdminUserActions from './shared/hooks/useAdminUserActions';
 import useAdminUserManagement from './shared/hooks/useAdminUserManagement';
 import useAdminBootstrap from './shared/hooks/useAdminBootstrap';
 import useMapEditorLoader from './shared/hooks/useMapEditorLoader';
@@ -44,7 +43,6 @@ import type {
   ParkingTab,
   ParkingZoneForm,
   PolygonPoint,
-  Session,
   SidebarKey,
   SiteForm,
   TransitionForm,
@@ -182,6 +180,25 @@ export default function AdminDashboard() {
   const [cameraZoneCanvasSize, setCameraZoneCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const mapCanvasRef = useRef<HTMLDivElement | null>(null);
   const cameraZoneCanvasRef = useRef<HTMLDivElement | null>(null);
+
+  const {
+    handleLogin,
+    handleForgotPassword,
+    handleResetPassword,
+    handleLogout,
+    clearLoginFeedback,
+  } = useAdminAuthActions({
+    error,
+    loginFieldErrors,
+    success,
+    clearSession,
+    setSession,
+    setActiveView,
+    setBusy,
+    setError,
+    setLoginFieldErrors,
+    setSuccess,
+  });
 
   const {
     profile,
@@ -728,17 +745,6 @@ export default function AdminDashboard() {
     }
   }, [transitionForm.toMapVersionId, transitionTargetMapVersions]);
 
-  async function refreshUserSearchResults(activeSession: Session) {
-    const search = userActionState.userSearchTerm.trim();
-    if (!isSuperAdmin || search.length < 2) {
-      setUserSearchResults([]);
-      return;
-    }
-
-    const results = await adminApi.searchAdminUsers(activeSession.accessToken, search, 20);
-    setUserSearchResults(results);
-  }
-
   async function runAction(action: () => Promise<void>, successMessage: string, errorMessage = 'Islem tamamlanamadi.') {
     try {
       setBusy(true);
@@ -752,6 +758,23 @@ export default function AdminDashboard() {
       setBusy(false);
     }
   }
+
+  const {
+    handleToggleUserStatus,
+    handleDeleteOrRestoreUser,
+    handleAssignRole,
+    handleRemoveRole,
+    handleAssignOrganizationAdmin,
+  } = useAdminUserActions({
+    session,
+    isSuperAdmin,
+    userActionState,
+    selectedRoleUser,
+    selectedOrganizationAdminOrganization,
+    setUserSearchResults,
+    refreshUsers,
+    runAction,
+  });
 
   const {
     handleCreateOrganization,
@@ -894,159 +917,6 @@ export default function AdminDashboard() {
     refreshLoadedMapVersion,
     runAction,
   });
-
-  async function handleLogin(emailOrUserName: string, password: string) {
-    try {
-      setBusy(true);
-      setError(null);
-      setSuccess(null);
-      setLoginFieldErrors(null);
-      const auth = await adminApi.login(emailOrUserName, password);
-      const nextSession = {
-        accessToken: auth.accessToken,
-        refreshToken: auth.refreshToken,
-        accessTokenExpiresAt: auth.accessTokenExpiresAt,
-        refreshTokenExpiresAt: auth.refreshTokenExpiresAt,
-      };
-
-      setSession(nextSession);
-      setActiveView('organizations');
-    } catch (loginError) {
-      setLoginFieldErrors(getApiFieldErrors(loginError));
-      setError(getApiErrorMessage(loginError, 'Giris yapilamadi.'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleForgotPassword(email: string) {
-    try {
-      setBusy(true);
-      setError(null);
-      setSuccess(null);
-      setLoginFieldErrors(null);
-      await adminApi.forgotPassword(email.trim());
-      setSuccess('E-posta sistemde kayitliysa sifre yenileme baglantisi gonderildi.');
-    } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'Sifirlama baglantisi gonderilemedi.'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleResetPassword(token: string, newPassword: string) {
-    try {
-      setBusy(true);
-      setError(null);
-      setSuccess(null);
-      setLoginFieldErrors(null);
-      await adminApi.resetPassword(token.trim(), newPassword);
-      setSuccess('Sifreniz guncellendi. Yeni sifrenizle giris yapabilirsiniz.');
-    } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'Sifre yenilenemedi.'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function handleLogout() {
-    clearSession();
-    setError(null);
-    setLoginFieldErrors(null);
-    setSuccess(null);
-  }
-
-  function clearLoginFeedback() {
-    if (!error && !loginFieldErrors && !success) {
-      return;
-    }
-
-    setError(null);
-    setLoginFieldErrors(null);
-    setSuccess(null);
-  }
-
-  async function handleToggleUserStatus(user: AdminUserListItem) {
-    if (!session) {
-      return;
-    }
-
-    await runAction(async () => {
-      await adminApi.setAdminUserStatus(session.accessToken, user.id, !user.isActive);
-      await refreshUsers(session);
-    }, 'Kullanici durumu guncellendi.');
-  }
-
-  async function handleDeleteOrRestoreUser(user: AdminUserListItem) {
-    if (!session) {
-      return;
-    }
-
-    await runAction(async () => {
-      if (user.isDeleted) {
-        await adminApi.restoreAdminUser(session.accessToken, user.id);
-      } else {
-        await adminApi.softDeleteAdminUser(session.accessToken, user.id);
-      }
-      await refreshUsers(session);
-    }, user.isDeleted ? 'Kullanici geri yuklendi.' : 'Kullanici pasife alindi.');
-  }
-
-  async function handleAssignRole() {
-    if (!session || !userActionState.selectedUserId || !userActionState.selectedRoleId) {
-      return;
-    }
-
-    await runAction(async () => {
-      await adminApi.assignRole(
-        session.accessToken,
-        userActionState.selectedUserId,
-        userActionState.selectedRoleId,
-      );
-      await refreshUsers(session);
-      await refreshUserSearchResults(session);
-    }, 'Rol atandi.');
-  }
-
-  async function handleRemoveRole() {
-    if (!session || !userActionState.selectedUserId || !userActionState.selectedRoleId) {
-      return;
-    }
-
-    await runAction(async () => {
-      await adminApi.removeRole(
-        session.accessToken,
-        userActionState.selectedUserId,
-        userActionState.selectedRoleId,
-      );
-      await refreshUsers(session);
-      await refreshUserSearchResults(session);
-    }, 'Rol kaldirildi.');
-  }
-
-  async function handleAssignOrganizationAdmin() {
-    if (
-      !session ||
-      !userActionState.selectedUserId ||
-      !userActionState.selectedOrganizationAdminOrganizationId
-    ) {
-      return;
-    }
-
-    const organizationName = selectedOrganizationAdminOrganization?.name ?? 'secilen sirket';
-
-    await runAction(async () => {
-      await adminApi.assignOrganizationAdmin(
-        session.accessToken,
-        userActionState.selectedOrganizationAdminOrganizationId,
-        userActionState.selectedUserId,
-      );
-      await Promise.all([
-        refreshUsers(session),
-        refreshUserSearchResults(session),
-      ]);
-    }, `${selectedRoleUser?.email ?? 'Kullanici'} ${organizationName} icin sirket admini yapildi.`);
-  }
 
   if (!session) {
     return (
