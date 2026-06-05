@@ -7,6 +7,10 @@ import type {
 } from '../../shared/services/adminApi';
 import CodeGuide from '../../shared/components/CodeGuide';
 import FieldShell from '../../shared/components/FieldShell';
+import LockedMapNotice from './LockedMapNotice';
+import MapGraphList from './MapGraphList';
+import NodeQrPanel from './NodeQrPanel';
+import { getNodeTypeGuide } from './nodeTypeGuide';
 import type {
   ConnectionForm,
   MapEditorSelectionState,
@@ -16,10 +20,8 @@ import type {
 } from '../../shared/types/admin.types';
 import { allNodeTypeOptions, nodeTypeOptions, transitionTypeOptions } from '../../shared/constants';
 import {
-  actionButtonClassName,
   enumLabel,
   inputClassName,
-  nodeTypeGeneratesQr,
   sectionCardClassName,
   selectClassName,
   statusLabel,
@@ -135,23 +137,11 @@ export default function MapEditorSidebar({
       <div className="grid gap-6 xl:grid-cols-2 2xl:grid-cols-3">
         <div className={sectionCardClassName()}>
           <p className="admin-kicker">Dugum ekle</p>
-          {mapEditor && !selectedMapCanEdit ? (
-            <div className="admin-panel-subtle mt-4 p-4 text-sm leading-6 text-[#d7d2ca]">
-              <p className="font-semibold text-[#F5F3EF]">
-                Bu surum {statusLabel(mapEditor.status).toLowerCase()} oldugu icin kilitli.
-              </p>
-              <p className="mt-1 text-[#8f96a3]">
-                Duzenlemek icin taslak kopya olustur; yeni kopya otomatik secilir.
-              </p>
-              <button
-                className="admin-action admin-action-accent mt-3 inline-flex items-center justify-center px-4 py-2 text-sm font-semibold"
-                onClick={onDuplicateMapVersion}
-                type="button"
-              >
-                Taslak kopya olustur
-              </button>
-            </div>
-          ) : null}
+          <LockedMapNotice
+            mapEditor={mapEditor}
+            selectedMapCanEdit={selectedMapCanEdit}
+            onDuplicateMapVersion={onDuplicateMapVersion}
+          />
           <div className="mt-6 grid gap-4">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {nodeTypeOptions.map((option) => {
@@ -231,64 +221,14 @@ export default function MapEditorSidebar({
               <Plus className="h-4 w-4" />
               {mapEditorSelection.editingNodeId ? 'Dugumu guncelle' : 'Dugum ekle'}
             </button>
-            {selectedMapNode && nodeTypeGeneratesQr(selectedMapNode.nodeType) ? (
-              <div className="admin-panel-subtle p-4">
-                <p className="admin-kicker">QR ve linkler</p>
-                <p className="mt-2 text-sm font-semibold text-[#F5F3EF]">
-                  {selectedMapNode.code} - {selectedMapNode.label}
-                </p>
-
-                {!selectedMapIsPublished ? (
-                  <div className="mt-4 border border-dashed border-[rgba(245,243,239,0.12)] bg-[#0d1013] p-4 text-sm leading-6 text-[#8f96a3]">
-                    Bu QR canli mapsite linkidir. Taslak surumlerde kullanima acilmaz; haritayi yayina aldiktan sonra QR ve link burada gorunur.
-                  </div>
-                ) : selectedNodeQrDataUrl ? (
-                  <div className="mt-4 border border-[rgba(245,243,239,0.08)] bg-[#0d1013] p-4">
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
-                      <img
-                        alt={`${selectedMapNode.code} QR`}
-                        className="h-32 w-32 shrink-0 rounded-[8px] border border-[rgba(245,243,239,0.08)] bg-white p-3"
-                        src={selectedNodeQrDataUrl}
-                      />
-                      <div className="min-w-0 flex-1 space-y-3 text-xs leading-5 text-[#8f96a3]">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f96a3]">
-                            Tek QR linki
-                          </p>
-                          <p className="mt-2 break-all font-mono text-xs leading-5 text-[#d7d2ca]">
-                            {selectedNodeMapsiteUrl}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <a
-                            className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
-                            href={selectedNodeMapsiteUrl}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            Mapsite'de ac
-                          </a>
-                          <a
-                            className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
-                            download={`${selectedMapNode.code.toLowerCase()}-qr.png`}
-                            href={selectedNodeQrDataUrl}
-                          >
-                            QR indir
-                          </a>
-                          <button
-                            className="admin-action inline-flex items-center justify-center px-3 py-2 font-semibold transition"
-                            onClick={onCopyNodeMapsiteLink}
-                            type="button"
-                          >
-                            {copiedNodeLinkType === 'node-mapsite' ? 'Kopyalandi' : 'Link kopyala'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+            <NodeQrPanel
+              selectedMapNode={selectedMapNode}
+              selectedMapIsPublished={selectedMapIsPublished}
+              selectedNodeQrDataUrl={selectedNodeQrDataUrl}
+              selectedNodeMapsiteUrl={selectedNodeMapsiteUrl}
+              copiedNodeLinkType={copiedNodeLinkType}
+              onCopyNodeMapsiteLink={onCopyNodeMapsiteLink}
+            />
           </div>
         </div>
 
@@ -538,160 +478,22 @@ export default function MapEditorSidebar({
       </div>
 
       {mapEditor ? (
-        <div className={sectionCardClassName()}>
-          <p className="admin-kicker">Mevcut grafik</p>
-          <div className="mt-6 grid gap-6 xl:grid-cols-2">
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-[#F5F3EF]">Dugumler</p>
-                <div className="w-full max-w-xs">
-                  <input
-                    className={inputClassName()}
-                    placeholder="Kod, etiket veya tip ara"
-                    value={mapGraphSearch.nodeListTerm}
-                    onChange={(event) => onMapGraphSearchChange({ ...mapGraphSearch, nodeListTerm: event.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                {filteredMapNodes.map((node) => (
-                  <div key={node.id} className="admin-panel-subtle p-4">
-                    <p className="text-sm font-semibold text-[#F5F3EF]">
-                      {node.code} - {node.label}
-                    </p>
-                    <p className="mt-1 text-xs text-[#8f96a3]">
-                      {enumLabel(node.nodeType, allNodeTypeOptions)} - ({node.pixelX}, {node.pixelY})
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                      <button className={actionButtonClassName('neutral')} onClick={() => onStartNodeEdit(node)} type="button">Duzenle</button>
-                      <button className={actionButtonClassName('danger')} disabled={!selectedMapCanEdit} onClick={() => onDeleteNode(node.id)} type="button">Sil</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-[#F5F3EF]">Baglantilar</p>
-                <div className="w-full max-w-xs">
-                  <input
-                    className={inputClassName()}
-                    placeholder="Baslangic veya hedef ara"
-                    value={mapGraphSearch.connectionListTerm}
-                    onChange={(event) =>
-                      onMapGraphSearchChange({ ...mapGraphSearch, connectionListTerm: event.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                {filteredMapConnections.map((connection) => {
-                  const fromNode = mapEditor.nodes.find((node) => node.id === connection.fromNodeId);
-                  const toNode = mapEditor.nodes.find((node) => node.id === connection.toNodeId);
-                  return (
-                    <div key={connection.id} className="admin-panel-subtle p-4">
-                      <p className="text-sm font-semibold text-[#F5F3EF]">
-                        {fromNode ? `${fromNode.code} - ${fromNode.label}` : connection.fromNodeId.slice(0, 8)}
-                        {' -> '}
-                        {toNode ? `${toNode.code} - ${toNode.label}` : connection.toNodeId.slice(0, 8)}
-                      </p>
-                      <p className="mt-1 text-xs text-[#8f96a3]">
-                        {connection.distanceMeters}m - {connection.isBidirectional ? 'Cift yonlu' : 'Tek yonlu'}
-                      </p>
-                      <div className="mt-3 flex gap-2">
-                        <button className={actionButtonClassName('neutral')} onClick={() => onStartConnectionEdit(connection)} type="button">Duzenle</button>
-                        <button className={actionButtonClassName('danger')} disabled={!selectedMapCanEdit} onClick={() => onDeleteConnection(connection.id)} type="button">Sil</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 border-t border-[rgba(245,243,239,0.08)] pt-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[#F5F3EF]">Kat gecisleri</p>
-                <p className="mt-1 text-xs leading-5 text-[#8f96a3]">
-                  Bu haritadan veya bu haritaya tanimlanan asansor, merdiven ve giris baglantilari.
-                </p>
-              </div>
-              <span className="admin-pill px-3 py-1.5 text-xs font-semibold">
-                {mapTransitions.length} kayit
-              </span>
-            </div>
-            <div className="mt-4 grid gap-3 xl:grid-cols-2">
-              {mapTransitions.length === 0 ? (
-                <div className="admin-panel-subtle border-dashed p-4 text-sm text-[#8f96a3]">
-                  Henuz kat gecisi yok.
-                </div>
-              ) : null}
-              {mapTransitions.map((transition) => {
-                const fromMap = mapVersionById.get(transition.fromMapVersionId);
-                const toMap = mapVersionById.get(transition.toMapVersionId);
-                const fromNode =
-                  transition.fromMapVersionId === mapEditor.id
-                    ? mapEditor.nodes.find((node) => node.id === transition.fromNodeId)
-                    : null;
-                const toNode =
-                  transition.toMapVersionId === mapEditor.id
-                    ? mapEditor.nodes.find((node) => node.id === transition.toNodeId)
-                    : null;
-                return (
-                  <div key={transition.id} className="admin-panel-subtle p-4">
-                    <p className="text-sm font-semibold text-[#F5F3EF]">
-                      {fromNode ? `${fromNode.code} - ${fromNode.label}` : fromMap?.floorName ?? 'Kaynak kat'}
-                      {' -> '}
-                      {toNode ? `${toNode.code} - ${toNode.label}` : toMap?.floorName ?? 'Hedef kat'}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-[#8f96a3]">
-                      {fromMap ? `${fromMap.floorName} / ${fromMap.name}` : transition.fromMapVersionId.slice(0, 8)}
-                      {' -> '}
-                      {toMap ? `${toMap.floorName} / ${toMap.name}` : transition.toMapVersionId.slice(0, 8)}
-                    </p>
-                    <p className="mt-1 text-xs text-[#8f96a3]">
-                      {enumLabel(transition.connectionType, transitionTypeOptions)} - {transition.distanceMeters}m -{' '}
-                      {transition.isBidirectional ? 'Cift yonlu' : 'Tek yonlu'}
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        className={actionButtonClassName('danger')}
-                        disabled={!selectedMapCanEdit}
-                        onClick={() => onDeleteTransition(transition.id)}
-                        type="button"
-                      >
-                        Sil
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <MapGraphList
+          mapEditor={mapEditor}
+          selectedMapCanEdit={selectedMapCanEdit}
+          mapGraphSearch={mapGraphSearch}
+          filteredMapNodes={filteredMapNodes}
+          filteredMapConnections={filteredMapConnections}
+          mapTransitions={mapTransitions}
+          mapVersionById={mapVersionById}
+          onMapGraphSearchChange={onMapGraphSearchChange}
+          onStartNodeEdit={onStartNodeEdit}
+          onDeleteNode={onDeleteNode}
+          onStartConnectionEdit={onStartConnectionEdit}
+          onDeleteConnection={onDeleteConnection}
+          onDeleteTransition={onDeleteTransition}
+        />
       ) : null}
     </>
   );
-}
-
-function getNodeTypeGuide(nodeType: number, isParkingSpotNode: boolean) {
-  if (nodeType === 3) {
-    return 'Bina girisi yaya/ziyaretci hedefidir. Hastane, AVM veya tesis kapisi gibi noktalarda kullanin.';
-  }
-
-  if (nodeType === 4) {
-    return 'Bina cikisi yaya/ziyaretci cikisidir. Normal tesis cikis rotalari bu noktayi hedefler.';
-  }
-
-  if (nodeType === 9) {
-    return 'Otopark arac girisi, surucunun araci otoparka soktugu rampa veya kapidir. Bina girisi yerine kullanmayin.';
-  }
-
-  if (nodeType === 10) {
-    return 'Otopark arac cikisi, surucunun otoparktan aracla ayrildigi cikistir. Otopark modundaki cikis rotalari bu noktayi hedefler.';
-  }
-
-  return isParkingSpotNode
-    ? 'Bu nokta kaydedildiginde park kaydi ve QR kodu sistem tarafinda otomatik olusturulur.'
-    : 'Bu nokta kaydedildiginde QR kodu sistem tarafinda otomatik olusturulur.';
 }
